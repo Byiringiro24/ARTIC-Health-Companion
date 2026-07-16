@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "ARTIC Health Companion",
+    "slug": "artic-health-companion",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icons/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#027c8e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "rw.artic.health"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
+        "backgroundColor": "#027c8e"
+      },
+      "package": "rw.artic.health"
+    },
+    "web": {
+      "favicon": "./assets/icons/favicon.png"
+    },
+    "extra": {
+      "apiUrl": "http://localhost:4000/api"
+    }
+  }
+}
