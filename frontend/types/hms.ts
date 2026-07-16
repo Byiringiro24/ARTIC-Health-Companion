@@ -70,11 +70,17 @@ export type AppUser = {
   id: string;
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: Role;
   department: string;
   facility: string;
   patientId?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  roleName?: string;
+  roleLabel?: string;
+  firstName?: string;
+  lastName?: string;
 };
 
 export type RoleDefinition = {

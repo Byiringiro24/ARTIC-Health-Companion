@@ -147,6 +147,21 @@ Hospital/
 
 ---
 
+## Deployment
+
+The project is prepared to run alongside an existing ARTIC VMS deployment on the same server without port conflicts.
+
+- Use [SERVER_DEPLOYMENT.md](SERVER_DEPLOYMENT.md) for the full server-side deployment playbook.
+- For a fast local-to-server deployment, run:
+
+```powershell
+pwsh -File .\scripts\deploy-to-server.ps1 -RemoteHost YOUR_SERVER_IP -RemoteUser artic
+```
+
+This deploys the current repository into a separate directory at /home/artic/artic-hms and uses the non-conflicting ports 3001 and 4001.
+
+---
+
 ## License
 
 MIT © 2026 ARTIC Health

@@ -1,8 +1,5 @@
 /**
  * JWT Service — issues, verifies, and revokes access + refresh tokens.
- *
- * Access token  : short-lived (15 min), carries user identity + role.
- * Refresh token : long-lived (7 d), stored hashed in DB; single-use rotation.
  */
 
 import jwt from "jsonwebtoken";
@@ -41,12 +38,12 @@ export function hashToken(raw) {
 }
 
 // ── Persist refresh token ─────────────────────────────────────────────────────
-export function saveRefreshToken(userId, rawToken, meta = {}) {
+export async function saveRefreshToken(userId, rawToken, meta = {}) {
   const db   = getDb();
   const hash = hashToken(rawToken);
   const exp  = new Date(Date.now() + parseDuration(config.jwt.refreshExpires)).toISOString();
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO refresh_tokens (id, user_id, token_hash, device_info, ip_address, user_agent, expires_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(uuidv4(), userId, hash, meta.deviceInfo || null, meta.ip || null, meta.userAgent || null, exp);
@@ -67,12 +64,12 @@ export function verifyAccessToken(token) {
 }
 
 // ── Rotate refresh token ──────────────────────────────────────────────────────
-export function rotateRefreshToken(rawToken, userId, meta = {}) {
+export async function rotateRefreshToken(rawToken, userId, meta = {}) {
   const db   = getDb();
   const hash = hashToken(rawToken);
   const now  = new Date().toISOString();
 
-  const record = db.prepare(`
+  const record = await db.prepare(`
     SELECT * FROM refresh_tokens
     WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > ?
   `).get(hash, now);
@@ -80,37 +77,35 @@ export function rotateRefreshToken(rawToken, userId, meta = {}) {
   if (!record) throw new AuthError("Refresh token is invalid or expired");
   if (record.user_id !== userId) throw new AuthError("Token user mismatch");
 
-  // Revoke old token (single-use rotation)
-  db.prepare(`UPDATE refresh_tokens SET revoked_at = ? WHERE id = ?`).run(now, record.id);
+  await db.prepare(`UPDATE refresh_tokens SET revoked_at = ? WHERE id = ?`).run(now, record.id);
 
-  // Issue new tokens
   const newRefresh = issueRefreshToken({ id: userId });
-  saveRefreshToken(userId, newRefresh, meta);
+  await saveRefreshToken(userId, newRefresh, meta);
   return newRefresh;
 }
 
 // ── Revoke all tokens for user (logout all devices) ───────────────────────────
-export function revokeAllUserTokens(userId) {
+export async function revokeAllUserTokens(userId) {
   const db  = getDb();
   const now = new Date().toISOString();
-  db.prepare(`UPDATE refresh_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL`).run(now, userId);
+  await db.prepare(`UPDATE refresh_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL`).run(now, userId);
 }
 
 // ── Revoke one token ──────────────────────────────────────────────────────────
-export function revokeToken(rawToken) {
+export async function revokeToken(rawToken) {
   const db   = getDb();
   const hash = hashToken(rawToken);
   const now  = new Date().toISOString();
-  db.prepare(`UPDATE refresh_tokens SET revoked_at = ? WHERE token_hash = ?`).run(now, hash);
+  await db.prepare(`UPDATE refresh_tokens SET revoked_at = ? WHERE token_hash = ?`).run(now, hash);
 }
 
 // ── Verify + consume refresh token ───────────────────────────────────────────
-export function consumeRefreshToken(rawToken) {
+export async function consumeRefreshToken(rawToken) {
   const db   = getDb();
   const hash = hashToken(rawToken);
   const now  = new Date().toISOString();
 
-  const record = db.prepare(`
+  const record = await db.prepare(`
     SELECT rt.*, u.id as uid
     FROM refresh_tokens rt
     JOIN users u ON u.id = rt.user_id
@@ -119,8 +114,7 @@ export function consumeRefreshToken(rawToken) {
 
   if (!record) throw new AuthError("Refresh token is invalid or expired");
 
-  // Revoke on use
-  db.prepare(`UPDATE refresh_tokens SET revoked_at = ? WHERE id = ?`).run(now, record.id);
+  await db.prepare(`UPDATE refresh_tokens SET revoked_at = ? WHERE id = ?`).run(now, record.id);
   return record;
 }
 

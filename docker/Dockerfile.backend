@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Install only production dependencies
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts
+RUN npm install --omit=dev --ignore-scripts --legacy-peer-deps
 
 # Copy source
 COPY src/ ./src/
@@ -19,7 +19,7 @@ WORKDIR /app
 # Security: run as non-root
 RUN addgroup -g 1001 -S artic && adduser -u 1001 -S artic -G artic
 
-# Create data directory with correct ownership (SQLite DB lives here)
+# Create data directory with correct ownership
 RUN mkdir -p /app/data && chown artic:artic /app/data
 
 # Copy from builder

@@ -13,7 +13,7 @@ import { AuthError, ForbiddenError } from "./errorHandler.js";
 import { v4 as uuidv4 } from "uuid";
 
 // ── Authenticate ──────────────────────────────────────────────────────────────
-export function authenticate(req, res, next) {
+export async function authenticate(req, res, next) {
   const header = req.headers.authorization || "";
   if (!header.startsWith("Bearer ")) return next(new AuthError());
 
@@ -22,7 +22,7 @@ export function authenticate(req, res, next) {
 
   // Fetch live user (catches deactivated accounts mid-session)
   const db   = getDb();
-  const user = db.prepare(`
+  const user = await db.prepare(`
     SELECT u.*, r.name as role_name, r.label as role_label
     FROM users u
     JOIN roles r ON r.id = u.role_id
@@ -34,7 +34,7 @@ export function authenticate(req, res, next) {
   if (user.is_locked)  return next(new AuthError("Account is locked"));
 
   // Attach modules the role has access to
-  const modules = db.prepare(`SELECT module_key FROM role_modules WHERE role_id = ?`).all(user.role_id).map(r => r.module_key);
+  const modules = (await db.prepare(`SELECT module_key FROM role_modules WHERE role_id = ?`).all(user.role_id)).map(r => r.module_key);
 
   req.user    = { ...user, modules };
   req.tokenPayload = payload;
@@ -77,14 +77,14 @@ export function auditLog(action, module, resourceFn = null) {
   };
 }
 
-function writeAuditLog(req, action, module, resourceId = null, reason = null) {
+async function writeAuditLog(req, action, module, resourceId = null, reason = null) {
   try {
     const db = getDb();
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO audit_logs
         (id, tenant_id, user_id, user_email, user_role, action, module, resource, record_id,
          ip_address, user_agent, result, reason, created_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
     `).run(
       uuidv4(),
       req.user?.tenant_id || null,

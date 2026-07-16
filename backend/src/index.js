@@ -12,7 +12,7 @@ import { config } from "./config/index.js";
 
 async function bootstrap() {
   // ── 1. Run database migrations (idempotent) ──────────────────────────────
-  runMigrations();
+  await runMigrations();
 
   // ── 2. Seed demo data on first run ────────────────────────────────────────
   try { await seed(); } catch (e) {

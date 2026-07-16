@@ -54,10 +54,10 @@ else              app.use(morgan("combined"));
 app.use(globalLimiter);
 
 // ── Health check (no auth) ────────────────────────────────────────────────────
-app.get("/health", (req, res) => {
+app.get("/health", async (req, res) => {
   const db = getDb();
   let dbStatus = "ok";
-  try { db.prepare("SELECT 1").get(); } catch { dbStatus = "error"; }
+  try { await db.prepare("SELECT 1").get(); } catch { dbStatus = "error"; }
 
   res.json({
     status:    "ok",

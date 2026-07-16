@@ -1,45 +1,100 @@
 "use client";
 
+import { apiFetch } from "@/lib/api/client";
 import { demoUsers, roleDefinitions } from "@/lib/data";
 import type { AppUser } from "@/types/hms";
 
 const sessionKey = "artic-health-session";
 
-export function login(email: string, password: string): AppUser | null {
-  const user = demoUsers.find((item) => item.email.toLowerCase() === email.toLowerCase() && item.password === password);
-  if (!user) {
-    return null;
-  }
+function normalizeUser(user: any): AppUser | null {
+  if (!user) return null;
+  const role = user.role || user.roleName || user.role_name;
+  if (!role) return null;
 
-  localStorage.setItem(sessionKey, JSON.stringify(user));
-  return user;
+  const name = user.name || `${user.firstName || user.first_name || ""} ${user.lastName || user.last_name || ""}`.trim() || user.email || "ARTIC User";
+
+  return {
+    id: String(user.id),
+    name,
+    email: user.email ?? "",
+    password: user.password ?? undefined,
+    role,
+    department: user.department ?? user.departmentName ?? "",
+    facility: user.facility ?? user.facilityName ?? user.hospital ?? "",
+    patientId: user.patientId ?? user.patient_id ?? undefined,
+    accessToken: user.accessToken,
+    refreshToken: user.refreshToken,
+    roleName: user.roleName || user.role_name,
+    roleLabel: user.roleLabel || user.role_label,
+    firstName: user.firstName || user.first_name,
+    lastName: user.lastName || user.last_name,
+  };
+}
+
+export async function login(email: string, password: string): Promise<AppUser | null> {
+  const trimmed = email.trim();
+  if (!trimmed || !password) return null;
+
+  try {
+    const result = await apiFetch<{ accessToken: string; refreshToken: string; user: any }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: trimmed, password }),
+    });
+
+    const normalized = normalizeUser({ ...result.user, accessToken: result.accessToken, refreshToken: result.refreshToken });
+    if (!normalized) return null;
+
+    localStorage.setItem(sessionKey, JSON.stringify(normalized));
+    return normalized;
+  } catch (error) {
+    console.warn("API login failed, falling back to demo users", error);
+
+    const fallback = demoUsers.find((item) => item.email.toLowerCase() === trimmed.toLowerCase() && item.password === password);
+    if (!fallback) return null;
+
+    localStorage.setItem(sessionKey, JSON.stringify(fallback));
+    return fallback;
+  }
 }
 
 export function loginAs(user: AppUser): AppUser {
-  localStorage.setItem(sessionKey, JSON.stringify(user));
-  return user;
+  const normalized = normalizeUser(user) ?? user;
+  localStorage.setItem(sessionKey, JSON.stringify(normalized));
+  return normalized;
 }
 
 export function getSession(): AppUser | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
+  if (typeof window === "undefined") return null;
 
   const raw = localStorage.getItem(sessionKey);
-  if (!raw) {
-    return null;
-  }
+  if (!raw) return null;
 
   try {
-    return JSON.parse(raw) as AppUser;
+    const item = JSON.parse(raw) as AppUser;
+    if (!item.role && (item as any).roleName) item.role = (item as any).roleName;
+    if (!item.name) item.name = `${(item as any).firstName ?? ""} ${(item as any).lastName ?? ""}`.trim() || item.email;
+    return item;
   } catch {
     localStorage.removeItem(sessionKey);
     return null;
   }
 }
 
-export function logout() {
+export async function logout(): Promise<void> {
+  const session = getSession();
+  try {
+    await apiFetch("/api/auth/logout", {
+      method: "POST",
+      body: JSON.stringify({ refreshToken: session?.refreshToken ?? null }),
+    });
+  } catch {
+    // Ignore logout errors and clear local state anyway.
+  }
   localStorage.removeItem(sessionKey);
+}
+
+export function getDashboardRoute(user: AppUser | null | undefined): string {
+  return "/dashboard";
 }
 
 export function canAccess(user: AppUser, module: string) {

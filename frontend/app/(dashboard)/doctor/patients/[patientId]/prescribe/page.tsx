@@ -1,3 +1,5 @@
-export default function PrescribePage() {
-  return null;
+import { RoutePageShell } from "@/components/RoutePageShell";
+
+export default function Page() {
+  return <RoutePageShell />;
 }

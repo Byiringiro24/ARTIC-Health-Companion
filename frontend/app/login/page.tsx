@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
-import { demoUsers, roleDefinitions } from "@/lib/data";
-import { login, loginAs } from "@/lib/auth";
+import { getDashboardRoute, login } from "@/lib/auth";
 import { useToast } from "@/lib/store";
 
 export default function LoginPage() {
@@ -17,26 +16,21 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    setTimeout(() => {
-      const user = login(email, password);
-      setLoading(false);
-      if (!user) {
-        setError("Invalid credentials. Try one of the demo accounts below.");
-        return;
-      }
-      show(`Welcome, ${user.name}!`, "success");
-      router.push("/dashboard");
-    }, 600);
-  }
 
-  function handleQuickLogin(user: typeof demoUsers[0]) {
-    loginAs(user);
-    show(`Logged in as ${user.name}`, "success");
-    router.push("/dashboard");
+    const user = await login(email, password);
+    setLoading(false);
+
+    if (!user) {
+      setError("Invalid credentials. Please use the correct staff email and password.");
+      return;
+    }
+
+    show(`Welcome, ${user.name}!`, "success");
+    router.push(getDashboardRoute(user));
   }
 
   return (
@@ -60,7 +54,7 @@ export default function LoginPage() {
       <section className="login-form-wrap">
         <form className="login-form" onSubmit={handleSubmit} noValidate>
           <h2>Sign in</h2>
-          <p className="muted">Use a demo account to explore the system.</p>
+          <p className="muted">Use your staff email and password to access the correct role-based workspace.</p>
 
           <label className="field">
             Email
@@ -83,16 +77,7 @@ export default function LoginPage() {
           </button>
 
           <div style={{ marginTop: 24 }}>
-            <p className="muted" style={{ fontSize: 12, marginBottom: 10 }}>Quick demo login — click any role:</p>
-            <div className="demo-grid">
-              {demoUsers.map((user) => (
-                <button className="demo-account" key={user.id} type="button" onClick={() => handleQuickLogin(user)}>
-                  <strong>{roleDefinitions[user.role].label}</strong>
-                  <br />
-                  <span className="muted" style={{ fontSize: 12 }}>{user.email}</span>
-                </button>
-              ))}
-            </div>
+            <p className="muted" style={{ fontSize: 12, marginBottom: 10 }}>One sign-in. The system routes you to the dashboard that matches your account.</p>
           </div>
         </form>
       </section>

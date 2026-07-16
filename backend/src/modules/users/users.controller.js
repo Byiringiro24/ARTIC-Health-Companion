@@ -4,7 +4,7 @@ import { asyncHandler } from "../../middleware/errorHandler.js";
 // GET /api/users
 export const list = asyncHandler(async (req, res) => {
   const { page, limit, search, roleId, hospitalId, departmentId, isActive } = req.query;
-  const result = usersService.getUsers({
+  const result = await usersService.getUsers({
     page: page ? parseInt(page) : 1,
     limit: limit ? parseInt(limit) : 20,
     search, roleId, hospitalId, departmentId,
@@ -15,7 +15,7 @@ export const list = asyncHandler(async (req, res) => {
 
 // GET /api/users/:id
 export const getOne = asyncHandler(async (req, res) => {
-  const user = usersService.getUserById(req.params.id);
+  const user = await usersService.getUserById(req.params.id);
   res.json({ success: true, user });
 });
 
@@ -30,18 +30,18 @@ export const create = asyncHandler(async (req, res) => {
 
 // PATCH /api/users/:id
 export const update = asyncHandler(async (req, res) => {
-  const user = usersService.updateUser(req.params.id, req.body, req.user.id);
+  const user = await usersService.updateUser(req.params.id, req.body, req.user.id);
   res.json({ success: true, user });
 });
 
 // DELETE /api/users/:id
 export const remove = asyncHandler(async (req, res) => {
-  usersService.deleteUser(req.params.id, req.user.id);
+  await usersService.deleteUser(req.params.id, req.user.id);
   res.json({ success: true, message: "User deleted" });
 });
 
 // GET /api/users/roles
 export const roles = asyncHandler(async (req, res) => {
-  const data = usersService.getRoles();
+  const data = await usersService.getRoles();
   res.json({ success: true, roles: data });
 });

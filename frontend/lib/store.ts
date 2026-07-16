@@ -20,21 +20,23 @@ export const useToast = create<ToastStore>((set) => ({
 }));
 
 // ─── Patient ──────────────────────────────────────────────────────────────────
-interface PatientStore { patients: Patient[]; selected: Patient | null; query: string; setQuery: (q: string) => void; select: (p: Patient | null) => void; add: (p: Patient) => void; update: (id: string, data: Partial<Patient>) => void; }
+interface PatientStore { patients: Patient[]; selected: Patient | null; query: string; setQuery: (q: string) => void; select: (p: Patient | null) => void; add: (p: Patient) => void; update: (id: string, data: Partial<Patient>) => void; setPatients: (patients: Patient[]) => void; }
 export const usePatientStore = create<PatientStore>((set) => ({
   patients: defaultPatients, selected: null, query: "",
   setQuery: (query: string) => set({ query }),
   select: (selected: Patient | null) => set({ selected }),
   add: (p: Patient) => set((s: PatientStore) => ({ patients: [p, ...s.patients] })),
   update: (id: string, data: Partial<Patient>) => set((s: PatientStore) => ({ patients: s.patients.map((p: Patient) => p.id === id ? { ...p, ...data } : p) })),
+  setPatients: (patients: Patient[]) => set({ patients }),
 }));
 
 // ─── Appointment ──────────────────────────────────────────────────────────────
-interface AppointmentStore { appointments: Appointment[]; add: (a: Appointment) => void; updateStatus: (id: string, status: Appointment["status"]) => void; }
+interface AppointmentStore { appointments: Appointment[]; add: (a: Appointment) => void; updateStatus: (id: string, status: Appointment["status"]) => void; setAppointments: (appointments: Appointment[]) => void; }
 export const useAppointmentStore = create<AppointmentStore>((set) => ({
   appointments: defaultAppointments,
   add: (a: Appointment) => set((s: AppointmentStore) => ({ appointments: [a, ...s.appointments] })),
   updateStatus: (id: string, status: Appointment["status"]) => set((s: AppointmentStore) => ({ appointments: s.appointments.map((a: Appointment) => a.id === id ? { ...a, status } : a) })),
+  setAppointments: (appointments: Appointment[]) => set({ appointments }),
 }));
 
 // ─── Inventory ────────────────────────────────────────────────────────────────

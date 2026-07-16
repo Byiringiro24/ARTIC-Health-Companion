@@ -1,6 +1,6 @@
 /**
  * ARTIC Health Companion — Complete Database Schema
- * Engine: SQLite (via better-sqlite3) — drop-in swap to PostgreSQL in production
+ * PostgreSQL-compatible schema used by the production backend
  *
  * Design decisions:
  *  - Every table has id (UUID), created_at, updated_at, deleted_at (soft delete)

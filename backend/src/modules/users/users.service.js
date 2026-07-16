@@ -19,7 +19,7 @@ const SELECT_USER = `
 `;
 
 // ── List ──────────────────────────────────────────────────────────────────────
-export function getUsers({ page = 1, limit = 20, search, roleId, hospitalId, departmentId, isActive } = {}) {
+export async function getUsers({ page = 1, limit = 20, search, roleId, hospitalId, departmentId, isActive } = {}) {
   const db     = getDb();
   const offset = (page - 1) * limit;
   const where  = ["u.deleted_at IS NULL"];
@@ -35,8 +35,9 @@ export function getUsers({ page = 1, limit = 20, search, roleId, hospitalId, dep
   if (isActive !== undefined) { where.push("u.is_active = ?"); params.push(isActive ? 1 : 0); }
 
   const cond    = where.join(" AND ");
-  const total   = db.prepare(`SELECT COUNT(*) as n FROM users u WHERE ${cond}`).get(...params).n;
-  const rows    = db.prepare(`
+  const totalRow = await db.prepare(`SELECT COUNT(*) as n FROM users u WHERE ${cond}`).get(...params);
+  const total = totalRow?.n ?? 0;
+  const rows    = await db.prepare(`
     SELECT u.*, r.name as role_name, r.label as role_label,
            d.name as department_name, h.name as hospital_name
     FROM users u
@@ -52,11 +53,11 @@ export function getUsers({ page = 1, limit = 20, search, roleId, hospitalId, dep
 }
 
 // ── Get one ───────────────────────────────────────────────────────────────────
-export function getUserById(id) {
+export async function getUserById(id) {
   const db   = getDb();
-  const user = db.prepare(`${SELECT_USER} AND u.id = ?`).get(id);
+  const user = await db.prepare(`${SELECT_USER} AND u.id = ?`).get(id);
   if (!user) throw new NotFoundError("User");
-  const modules = db.prepare(`SELECT module_key FROM role_modules WHERE role_id=?`).all(user.role_id).map(r => r.module_key);
+  const modules = (await db.prepare(`SELECT module_key FROM role_modules WHERE role_id=?`).all(user.role_id)).map(r => r.module_key);
   return safeUser(user, modules);
 }
 
@@ -64,16 +65,16 @@ export function getUserById(id) {
 export async function createUser(data, createdBy) {
   const db = getDb();
 
-  const existing = db.prepare(`SELECT id FROM users WHERE LOWER(email)=LOWER(?) AND deleted_at IS NULL`).get(data.email);
+  const existing = await db.prepare(`SELECT id FROM users WHERE LOWER(email)=LOWER(?) AND deleted_at IS NULL`).get(data.email);
   if (existing) throw new ConflictError(`Email '${data.email}' is already registered`);
 
-  const role = db.prepare(`SELECT id FROM roles WHERE id=? AND deleted_at IS NULL`).get(data.roleId);
+  const role = await db.prepare(`SELECT id FROM roles WHERE id=? AND deleted_at IS NULL`).get(data.roleId);
   if (!role) throw new AppError("Role not found", 422, "INVALID_ROLE");
 
   const hash = await bcrypt.hash(data.password || "TempPass2026!", config.bcrypt.rounds);
   const id   = `user-${uuidv4().slice(0, 8)}`;
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO users
       (id,tenant_id,hospital_id,department_id,role_id,first_name,last_name,email,phone,
        password_hash,job_title,qualification,professional_reg_number,
@@ -91,9 +92,9 @@ export async function createUser(data, createdBy) {
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
-export function updateUser(id, data, updatedBy) {
+export async function updateUser(id, data, updatedBy) {
   const db = getDb();
-  const existing = db.prepare(`SELECT * FROM users WHERE id=? AND deleted_at IS NULL`).get(id);
+  const existing = await db.prepare(`SELECT * FROM users WHERE id=? AND deleted_at IS NULL`).get(id);
   if (!existing) throw new NotFoundError("User");
 
   const fields = [];
@@ -109,32 +110,33 @@ export function updateUser(id, data, updatedBy) {
   }
   if (!fields.length) return getUserById(id);
 
-  fields.push("updated_by=?", "updated_at=datetime('now')");
+  fields.push("updated_by=?", "updated_at=CURRENT_TIMESTAMP");
   vals.push(updatedBy, id);
 
-  db.prepare(`UPDATE users SET ${fields.join(",")} WHERE id=?`).run(...vals);
+  await db.prepare(`UPDATE users SET ${fields.join(",")} WHERE id=?`).run(...vals);
   return getUserById(id);
 }
 
 // ── Soft delete ───────────────────────────────────────────────────────────────
-export function deleteUser(id, deletedBy) {
+export async function deleteUser(id, deletedBy) {
   const db = getDb();
-  const u  = db.prepare(`SELECT id FROM users WHERE id=? AND deleted_at IS NULL`).get(id);
+  const u  = await db.prepare(`SELECT id FROM users WHERE id=? AND deleted_at IS NULL`).get(id);
   if (!u) throw new NotFoundError("User");
-  db.prepare(`UPDATE users SET deleted_at=datetime('now'), is_active=0, updated_by=? WHERE id=?`).run(deletedBy, id);
+  await db.prepare(`UPDATE users SET deleted_at=CURRENT_TIMESTAMP, is_active=0, updated_by=? WHERE id=?`).run(deletedBy, id);
 }
 
 // ── Roles listing ─────────────────────────────────────────────────────────────
-export function getRoles() {
+export async function getRoles() {
   const db    = getDb();
-  const roles = db.prepare(`SELECT * FROM roles WHERE deleted_at IS NULL ORDER BY label`).all();
-  return roles.map(r => ({
+  const roles = await db.prepare(`SELECT * FROM roles WHERE deleted_at IS NULL ORDER BY label`).all();
+
+  return Promise.all(roles.map(async (r) => ({
     id:       r.id,
     name:     r.name,
     label:    r.label,
     isSystem: Boolean(r.is_system),
-    modules:  db.prepare(`SELECT module_key FROM role_modules WHERE role_id=?`).all(r.id).map(m => m.module_key),
-  }));
+    modules:  (await db.prepare(`SELECT module_key FROM role_modules WHERE role_id=?`).all(r.id)).map((m) => m.module_key),
+  })));
 }
 
 // ── Strip sensitive fields ─────────────────────────────────────────────────────

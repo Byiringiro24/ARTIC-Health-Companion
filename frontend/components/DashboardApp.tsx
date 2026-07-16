@@ -13,6 +13,8 @@ import {
 } from "recharts";
 
 import { getSession, logout } from "@/lib/auth";
+import { getPatients } from "@/lib/api/patients";
+import { getAppointments } from "@/lib/api/appointments";
 import {
   auditLogs, beds, bloodUnits, demoUsers, kpis,
   navModules, notifications, patientTimeline, queueEntries,
@@ -24,6 +26,24 @@ import {
 } from "@/lib/store";
 import { Modal } from "@/components/ui/Modal";
 import { DataTable, SectionHeader, StatCard } from "@/components/ui/shared";
+import { AccountantDashboard } from "@/components/dashboard/AccountantDashboard";
+import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
+import { AmbulanceDashboard } from "@/components/dashboard/AmbulanceDashboard";
+import { CashierDashboard } from "@/components/dashboard/CashierDashboard";
+import { DataOfficerDashboard } from "@/components/dashboard/DataOfficerDashboard";
+import { DoctorDashboard } from "@/components/dashboard/DoctorDashboard";
+import { HospitalManagerDashboard } from "@/components/dashboard/HospitalManagerDashboard";
+import { HrDashboard } from "@/components/dashboard/HrDashboard";
+import { InsuranceOfficerDashboard } from "@/components/dashboard/InsuranceOfficerDashboard";
+import { LabDashboard } from "@/components/dashboard/LabDashboard";
+import { MedicalDirectorDashboard } from "@/components/dashboard/MedicalDirectorDashboard";
+import { NurseDashboard } from "@/components/dashboard/NurseDashboard";
+import { PatientDashboard } from "@/components/dashboard/PatientDashboard";
+import { PharmacistDashboard } from "@/components/dashboard/PharmacistDashboard";
+import { QualityDashboard } from "@/components/dashboard/QualityDashboard";
+import { RadiologyDashboard } from "@/components/dashboard/RadiologyDashboard";
+import { ReceptionDashboard } from "@/components/dashboard/ReceptionDashboard";
+import { StoreManagerDashboard } from "@/components/dashboard/StoreManagerDashboard";
 
 // ── Module imports ────────────────────────────────────────────────────────────
 import { ConsultationModule } from "@/components/modules/ConsultationModule";
@@ -68,13 +88,43 @@ export function DashboardApp() {
   const [query, setQuery] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { setPatients } = usePatientStore();
+  const { setAppointments } = useAppointmentStore();
 
   useEffect(() => {
     const session = getSession();
     if (!session) { router.replace("/login"); return; }
     setUser(session);
-    setActiveModule(roleDefinitions[session.role].modules[0]);
+    const roleDef = roleDefinitions[session.role] ?? roleDefinitions.doctor;
+    setActiveModule(roleDef.modules[0] ?? "overview");
   }, [router]);
+
+  useEffect(() => {
+    const accessToken = user?.accessToken;
+    if (!accessToken) return;
+
+    async function hydrateData() {
+      try {
+        const patients = await getPatients(accessToken);
+        if (Array.isArray(patients) && patients.length > 0) {
+          setPatients(patients);
+        }
+      } catch (error) {
+        // Keep demo patient data if backend hydration fails.
+      }
+
+      try {
+        const appointments = await getAppointments(accessToken);
+        if (Array.isArray(appointments) && appointments.length > 0) {
+          setAppointments(appointments);
+        }
+      } catch (error) {
+        // Keep demo appointment data if backend hydration fails.
+      }
+    }
+
+    hydrateData();
+  }, [setAppointments, setPatients, user?.accessToken]);
 
   const availableModules = useMemo(() => {
     if (!user) return [];
@@ -98,7 +148,7 @@ export function DashboardApp() {
     );
   }
 
-  const role   = roleDefinitions[user.role];
+  const role   = roleDefinitions[user.role] ?? roleDefinitions.doctor;
   const active = navModules[activeModule];
   const unread = notifications.filter((n) => n.type === "danger" || n.type === "warning").length;
 
@@ -278,7 +328,48 @@ function ModuleRenderer({ user, module, query }: { user: AppUser; module: Module
 // ─────────────────────────────────────────────────────────────────────────────
 // OVERVIEW
 // ─────────────────────────────────────────────────────────────────────────────
-function OverviewModule({ user: _user }: { user: AppUser }) {
+function OverviewModule({ user }: { user: AppUser }) {
+  switch (user.role) {
+    case "doctor":
+      return <DoctorDashboard user={user} />;
+    case "nurse":
+      return <NurseDashboard user={user} />;
+    case "pharmacist":
+      return <PharmacistDashboard user={user} />;
+    case "laboratory":
+      return <LabDashboard user={user} />;
+    case "receptionist":
+      return <ReceptionDashboard user={user} />;
+    case "accountant":
+      return <AccountantDashboard user={user} />;
+    case "cashier":
+      return <CashierDashboard user={user} />;
+    case "insurance-officer":
+      return <InsuranceOfficerDashboard user={user} />;
+    case "system-admin":
+      return <AdminDashboard user={user} />;
+    case "hospital-manager":
+      return <HospitalManagerDashboard user={user} />;
+    case "medical-director":
+      return <MedicalDirectorDashboard user={user} />;
+    case "radiology":
+      return <RadiologyDashboard user={user} />;
+    case "hr-manager":
+      return <HrDashboard user={user} />;
+    case "store-manager":
+      return <StoreManagerDashboard user={user} />;
+    case "quality-officer":
+      return <QualityDashboard user={user} />;
+    case "data-officer":
+      return <DataOfficerDashboard user={user} />;
+    case "ambulance-driver":
+      return <AmbulanceDashboard user={user} />;
+    case "patient":
+      return <PatientDashboard user={user} />;
+    default:
+      break;
+  }
+
   const { appointments } = useAppointmentStore();
   const { items } = useInventoryStore();
   const lowStock = items.filter((i) => i.quantity <= i.reorderLevel);

@@ -12,14 +12,12 @@
 # from the VMS docker-compose. We connect to them from the host network.
 # If you want fully isolated databases, uncomment the postgres/redis services below.
 
-version: "3.9"
-
 services:
   # ── HMS Backend (Express + Node.js) ─────────────────────────────────────────
   hms-backend:
     build:
       context: ../backend
-      dockerfile: Dockerfile
+      dockerfile: ../docker/Dockerfile.backend
     container_name: artic-hms-backend
     restart: unless-stopped
     ports:
@@ -27,22 +25,21 @@ services:
     environment:
       PORT: "4001"
       NODE_ENV: "${NODE_ENV:-production}"
-      DATABASE_URL: "${HMS_DATABASE_URL}"
-      DATABASE_PATH: "/app/data/artic_health.db"
-      REDIS_URL: "${REDIS_URL:-redis://host.docker.internal:6379}"
+      DATABASE_URL: "${HMS_DATABASE_URL:-postgresql://Byiringiro:Artic%242026@host.docker.internal:5433/artic_hms?schema=public&sslmode=disable}"
+      REDIS_URL: "${REDIS_URL:-redis://host.docker.internal:6380}"
       REDIS_PREFIX: "hms:"
-      JWT_ACCESS_SECRET: "${HMS_JWT_ACCESS_SECRET}"
-      JWT_REFRESH_SECRET: "${HMS_JWT_REFRESH_SECRET}"
+      JWT_ACCESS_SECRET: "${HMS_JWT_ACCESS_SECRET:-artic-production-jwt-secret-min-32-chars-2026}"
+      JWT_REFRESH_SECRET: "${HMS_JWT_REFRESH_SECRET:-artic-production-refresh-secret-2026}"
       JWT_ACCESS_EXPIRES: "15m"
       JWT_REFRESH_EXPIRES: "7d"
       BCRYPT_ROUNDS: "12"
-      CORS_ORIGIN: "${HMS_CORS_ORIGIN}"
+      CORS_ORIGIN: "${HMS_CORS_ORIGIN:-http://localhost:3001,http://localhost:4001}"
       RATE_LIMIT_MAX: "200"
       DEFAULT_FACILITY: "${DEFAULT_FACILITY:-Kigali District Hospital}"
       DEFAULT_TIMEZONE: "Africa/Kigali"
       DEFAULT_CURRENCY: "RWF"
     volumes:
-      - hms_data:/app/data          # SQLite database persistence
+      - hms_data:/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"  # allows container to reach host postgres/redis
     healthcheck:
@@ -55,7 +52,7 @@ services:
   hms-frontend:
     build:
       context: ../frontend
-      dockerfile: Dockerfile
+      dockerfile: ../docker/Dockerfile.web
       args:
         NEXT_PUBLIC_API_URL: "${HMS_API_URL:-http://localhost:4001}"
     container_name: artic-hms-frontend
@@ -70,24 +67,35 @@ services:
         condition: service_healthy
 
   # ─── OPTIONAL: Dedicated PostgreSQL for HMS (uncomment if you want isolation) ─
-  # hms-postgres:
-  #   image: postgres:16-alpine
-  #   container_name: artic-hms-postgres
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_DB: artic_hms
-  #     POSTGRES_USER: artic_hms_user
-  #     POSTGRES_PASSWORD: "${HMS_DB_PASSWORD}"
-  #   ports:
-  #     - "5433:5432"          # 5433 to avoid conflict with VMS on 5432
-  #   volumes:
-  #     - hms_postgres_data:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U artic_hms_user -d artic_hms"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+  hms-postgres:
+    image: postgres:16-alpine
+    container_name: artic-hms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: artic_hms
+      POSTGRES_USER: Byiringiro
+      POSTGRES_PASSWORD: "Artic%242026"
+    ports:
+      - "5433:5432"          # 5433 on host to avoid conflict with other Postgres on 5432
+    volumes:
+      - hms_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Byiringiro -d artic_hms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  hms-redis:
+    image: redis:7-alpine
+    container_name: artic-hms-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"          # map host 6380 to container 6379 to avoid conflict with host Redis
+    volumes:
+      - hms_redis_data:/data
 
 volumes:
   hms_data:
   # hms_postgres_data:    # uncomment if using dedicated postgres above
+  hms_postgres_data:
+  hms_redis_data:

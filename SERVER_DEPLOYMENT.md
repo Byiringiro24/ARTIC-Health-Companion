@@ -6,6 +6,24 @@
 
 ---
 
+## Fastest Path From This Workspace
+
+If you want to ship the current local repository to the server without disturbing the existing VMS install, use the deployment helper script:
+
+```powershell
+pwsh -File .\scripts\deploy-to-server.ps1 -RemoteHost YOUR_SERVER_IP -RemoteUser artic
+```
+
+What this does:
+- packages the current repository state into a tarball
+- uploads it to a separate remote directory: /home/artic/artic-hms
+- extracts it there without touching the existing VMS project files
+- runs the server setup script so the new HMS instance uses ports 3001/4001
+
+If you prefer to deploy manually, follow the sections below.
+
+---
+
 ## Port Allocation (No Conflicts)
 
 | Service | VMS Project | HMS Project |
@@ -133,6 +151,19 @@ DEFAULT_FACILITY=Kigali District Hospital
 DEFAULT_TIMEZONE=Africa/Kigali
 DEFAULT_CURRENCY=RWF
 ```
+
+If you plan to use PostgreSQL and Redis on the same host, an example production `.env` (matching this repo's docker-compose defaults) is:
+
+```
+DATABASE_URL=postgresql://Byiringiro:Artic%242026@localhost:5433/artic_hms?schema=public&sslmode=disable
+REDIS_URL=redis://localhost:6380
+PORT=4001
+NODE_ENV=production
+JWT_ACCESS_SECRET=<your generated secret>
+JWT_REFRESH_SECRET=<your generated secret>
+```
+
+This setup maps the HMS Postgres container to host port `5433` and Redis to `6380` to avoid conflicts with other services running on `5432`/`6379`.
 
 > **Note:** HMS uses SQLite by default (`data/artic_health.db`) — no PostgreSQL config needed for Phase 1.
 > When you're ready for PostgreSQL (Phase 20), add: `DATABASE_URL=postgresql://artic_hms_user:...`

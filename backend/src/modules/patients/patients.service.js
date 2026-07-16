@@ -4,33 +4,42 @@
 
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "../../database/connection.js";
-import { NotFoundError, ConflictError, AppError } from "../../middleware/errorHandler.js";
+import { NotFoundError, ConflictError } from "../../middleware/errorHandler.js";
 
 const BASE_YEAR = new Date().getFullYear();
 
 // ── Generate next MRN ─────────────────────────────────────────────────────────
-function nextMRN(db, tenantId) {
-  const row = db.prepare(`
+async function nextMRN(db, tenantId) {
+  const normalize = (t) => {
+    if (!t) return "tenant-001";
+    if (typeof t === "string") return t;
+    if (typeof t === "object") return t.tenantId || t.tenant_id || t.id || "tenant-001";
+    return String(t);
+  };
+  const tid = normalize(tenantId);
+  const safeTid = String(tid).replace(/'/g, "''");
+  const row = await db.prepare(`
     SELECT mrn FROM patients
-    WHERE tenant_id=? AND mrn LIKE 'MRN-${BASE_YEAR}-%'
+    WHERE tenant_id='${safeTid}' AND mrn LIKE 'MRN-${BASE_YEAR}-%'
     ORDER BY mrn DESC LIMIT 1
-  `).get(tenantId);
+  `).get();
 
-  const seq = row
-    ? parseInt(row.mrn.split("-")[2], 10) + 1
-    : 1;
+  const seq = row ? parseInt(row.mrn.split("-")[2], 10) + 1 : 1;
   return `MRN-${BASE_YEAR}-${String(seq).padStart(5, "0")}`;
 }
 
 // ── List / search ─────────────────────────────────────────────────────────────
-export function getPatients({ page = 1, limit = 20, search, gender, insurance, status, hospitalId, tenantId } = {}) {
+export async function getPatients({ page = 1, limit = 20, search, gender, insurance, status, hospitalId, tenantId } = {}) {
   const db     = getDb();
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const where  = ["p.deleted_at IS NULL"];
   const params = [];
 
-  if (tenantId)   { where.push("p.tenant_id=?");   params.push(tenantId); }
-  if (hospitalId) { where.push("p.hospital_id=?");  params.push(hospitalId); }
+  const tid = tenantId || "tenant-001";
+  const hid = hospitalId || "hosp-001";
+
+  where.push("p.tenant_id=?");   params.push(tid);
+  where.push("p.hospital_id=?"); params.push(hid);
   if (gender)     { where.push("p.gender=?");        params.push(gender); }
   if (insurance)  { where.push("p.insurance_provider=?"); params.push(insurance); }
   if (status)     { where.push("p.status=?");        params.push(status); }
@@ -47,8 +56,9 @@ export function getPatients({ page = 1, limit = 20, search, gender, insurance, s
   }
 
   const cond  = where.join(" AND ");
-  const total = db.prepare(`SELECT COUNT(*) as n FROM patients p WHERE ${cond}`).get(...params).n;
-  const rows  = db.prepare(`
+  const totalRow = await db.prepare(`SELECT COUNT(*) as n FROM patients p WHERE ${cond}`).get(...params);
+  const total = totalRow?.n ?? 0;
+  const rows  = await db.prepare(`
     SELECT p.*, u.first_name||' '||u.last_name as registered_by_name
     FROM patients p
     LEFT JOIN users u ON u.id = p.registered_by
@@ -64,9 +74,9 @@ export function getPatients({ page = 1, limit = 20, search, gender, insurance, s
 }
 
 // ── Get one ───────────────────────────────────────────────────────────────────
-export function getPatientById(id) {
+export async function getPatientById(id) {
   const db = getDb();
-  const p  = db.prepare(`
+  const p  = await db.prepare(`
     SELECT p.*, u.first_name||' '||u.last_name as registered_by_name
     FROM patients p
     LEFT JOIN users u ON u.id = p.registered_by
@@ -76,40 +86,38 @@ export function getPatientById(id) {
   return formatPatient(p);
 }
 
-export function getPatientByMRN(mrn) {
+export async function getPatientByMRN(mrn) {
   const db = getDb();
-  const p  = db.prepare(`SELECT * FROM patients WHERE mrn=? AND deleted_at IS NULL`).get(mrn);
+  const p  = await db.prepare(`SELECT * FROM patients WHERE mrn=? AND deleted_at IS NULL`).get(mrn);
   if (!p) throw new NotFoundError("Patient");
   return formatPatient(p);
 }
 
-export function getPatientByNID(nid) {
+export async function getPatientByNID(nid) {
   const db = getDb();
-  const p  = db.prepare(`SELECT * FROM patients WHERE national_id=? AND deleted_at IS NULL`).get(nid);
+  const p  = await db.prepare(`SELECT * FROM patients WHERE national_id=? AND deleted_at IS NULL`).get(nid);
   if (!p) throw new NotFoundError("Patient");
   return formatPatient(p);
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────
-export function createPatient(data, createdBy, tenantId, hospitalId) {
+export async function createPatient(data, createdBy, tenantId, hospitalId) {
   const db = getDb();
 
-  // Duplicate NID check
   if (data.nationalId) {
-    const dup = db.prepare(`SELECT id FROM patients WHERE national_id=? AND deleted_at IS NULL`).get(data.nationalId);
+    const dup = await db.prepare(`SELECT id FROM patients WHERE national_id=? AND deleted_at IS NULL`).get(data.nationalId);
     if (dup) throw new ConflictError(`A patient with National ID '${data.nationalId}' already exists`);
   }
 
-  // Duplicate phone check
   if (data.phone) {
-    const dup = db.prepare(`SELECT id FROM patients WHERE phone=? AND deleted_at IS NULL`).get(data.phone);
+    const dup = await db.prepare(`SELECT id FROM patients WHERE phone=? AND deleted_at IS NULL`).get(data.phone);
     if (dup) throw new ConflictError(`A patient with phone '${data.phone}' already exists`);
   }
 
   const id  = `p-${uuidv4().slice(0, 8)}`;
-  const mrn = nextMRN(db, tenantId);
+  const mrn = await nextMRN(db, tenantId);
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO patients (
       id,tenant_id,hospital_id,mrn,national_id,passport_number,
       first_name,last_name,middle_name,date_of_birth,approximate_dob,gender,
@@ -155,9 +163,9 @@ export function createPatient(data, createdBy, tenantId, hospitalId) {
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
-export function updatePatient(id, data, updatedBy) {
+export async function updatePatient(id, data, updatedBy) {
   const db = getDb();
-  const existing = db.prepare(`SELECT * FROM patients WHERE id=? AND deleted_at IS NULL`).get(id);
+  const existing = await db.prepare(`SELECT * FROM patients WHERE id=? AND deleted_at IS NULL`).get(id);
   if (!existing) throw new NotFoundError("Patient");
 
   const fields = [];
@@ -190,18 +198,18 @@ export function updatePatient(id, data, updatedBy) {
 
   if (!fields.length) return getPatientById(id);
 
-  fields.push("updated_by=?", "updated_at=datetime('now')");
+  fields.push("updated_by=?", "updated_at=CURRENT_TIMESTAMP");
   vals.push(updatedBy, id);
-  db.prepare(`UPDATE patients SET ${fields.join(",")} WHERE id=?`).run(...vals);
+  await db.prepare(`UPDATE patients SET ${fields.join(",")} WHERE id=?`).run(...vals);
   return getPatientById(id);
 }
 
 // ── Soft delete ───────────────────────────────────────────────────────────────
-export function deletePatient(id, deletedBy) {
+export async function deletePatient(id, deletedBy) {
   const db = getDb();
-  const p  = db.prepare(`SELECT id FROM patients WHERE id=? AND deleted_at IS NULL`).get(id);
+  const p  = await db.prepare(`SELECT id FROM patients WHERE id=? AND deleted_at IS NULL`).get(id);
   if (!p) throw new NotFoundError("Patient");
-  db.prepare(`UPDATE patients SET deleted_at=datetime('now'), updated_by=?, status='deleted' WHERE id=?`).run(deletedBy, id);
+  await db.prepare(`UPDATE patients SET deleted_at=CURRENT_TIMESTAMP, updated_by=?, status='deleted' WHERE id=?`).run(deletedBy, id);
 }
 
 // ── Format output ─────────────────────────────────────────────────────────────

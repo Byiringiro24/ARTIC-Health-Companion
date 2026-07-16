@@ -1,6 +1,6 @@
 -- =============================================================================
 -- ARTIC Health Companion — Database Schema
--- SQLite (production: swap DATABASE_PATH for PostgreSQL via pg driver)
+-- PostgreSQL-compatible schema used by the production backend
 -- =============================================================================
 
 PRAGMA foreign_keys = ON;

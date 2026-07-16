@@ -1,4 +1,5 @@
-﻿export default function PatientsPage() {
-  return null;
-}
+import { RoutePageShell } from "@/components/RoutePageShell";
 
+export default function Page() {
+  return <RoutePageShell />;
+}

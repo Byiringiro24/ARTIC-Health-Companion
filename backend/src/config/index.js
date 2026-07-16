@@ -9,7 +9,7 @@ export const config = {
   isDev:      (process.env.NODE_ENV || "development") === "development",
 
   db: {
-    path: process.env.DATABASE_PATH || "./data/artic_health.db",
+    url: process.env.DATABASE_URL || "",
   },
 
   jwt: {

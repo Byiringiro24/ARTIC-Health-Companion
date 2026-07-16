@@ -1,7 +1,7 @@
 /**
  * Seed script — inserts default tenant, hospital, departments, roles, permissions,
  * and demo users with hashed passwords into the database.
- * Safe to run multiple times (uses INSERT OR IGNORE).
+ * Safe to run multiple times with PostgreSQL conflict handling.
  */
 
 import "dotenv/config";
@@ -85,36 +85,37 @@ export async function seed() {
   console.log("🌱  Seeding database…");
 
   // ── Tenant ──────────────────────────────────────────────────────────────────
-  db.prepare(`INSERT OR IGNORE INTO tenants (id,code,name,type,country,timezone,currency,is_active) VALUES (?,?,?,?,?,?,?,1)`).run(
+  await db.prepare(`INSERT INTO tenants (id,code,name,type,country,timezone,currency,is_active) VALUES (?,?,?,?,?,?,?,1) ON CONFLICT (id) DO NOTHING`).run(
     TENANT_ID, "ARTIC-RW", "ARTIC Health Rwanda", "network", "Rwanda", "Africa/Kigali", "RWF"
   );
 
   // ── Hospital ────────────────────────────────────────────────────────────────
-  db.prepare(`INSERT OR IGNORE INTO hospitals (id,tenant_id,code,name,type,moh_code,email,phone,is_active) VALUES (?,?,?,?,?,?,?,?,1)`).run(
+  await db.prepare(`INSERT INTO hospitals (id,tenant_id,code,name,type,moh_code,email,phone,is_active) VALUES (?,?,?,?,?,?,?,?,1) ON CONFLICT (id) DO NOTHING`).run(
     HOSPITAL_ID, TENANT_ID, "KDH-001", "Kigali District Hospital", "district", "KDH-001", "admin@kdh.gov.rw", "+250 788 000 001"
   );
 
   // ── Departments ─────────────────────────────────────────────────────────────
-  const insertDept = db.prepare(`INSERT OR IGNORE INTO departments (id,hospital_id,tenant_id,code,name,type,is_active) VALUES (?,?,?,?,?,?,1)`);
+  const insertDept = db.prepare(`INSERT INTO departments (id,hospital_id,tenant_id,code,name,type,is_active) VALUES (?,?,?,?,?,?,1) ON CONFLICT (id) DO NOTHING`);
   for (const d of DEPARTMENTS) {
-    insertDept.run(d.id, HOSPITAL_ID, TENANT_ID, d.code, d.name, d.type);
+    await insertDept.run(d.id, HOSPITAL_ID, TENANT_ID, d.code, d.name, d.type);
   }
 
   // ── Roles ───────────────────────────────────────────────────────────────────
-  const insertRole    = db.prepare(`INSERT OR IGNORE INTO roles (id,tenant_id,name,label,is_system,is_active) VALUES (?,?,?,?,?,1)`);
-  const insertModule  = db.prepare(`INSERT OR IGNORE INTO role_modules (role_id,module_key) VALUES (?,?)`);
+  const insertRole    = db.prepare(`INSERT INTO roles (id,tenant_id,name,label,is_system,is_active) VALUES (?,?,?,?,?,1) ON CONFLICT (id) DO NOTHING`);
+  const insertModule  = db.prepare(`INSERT INTO role_modules (role_id,module_key) VALUES (?,?) ON CONFLICT (role_id, module_key) DO NOTHING`);
   for (const r of ROLES) {
-    insertRole.run(r.id, TENANT_ID, r.name, r.label, r.is_system);
+    await insertRole.run(r.id, TENANT_ID, r.name, r.label, r.is_system);
     for (const m of r.modules) {
-      insertModule.run(r.id, m);
+      await insertModule.run(r.id, m);
     }
   }
 
   // ── Users ───────────────────────────────────────────────────────────────────
   const insertUser = db.prepare(`
-    INSERT OR IGNORE INTO users
+    INSERT INTO users
       (id,tenant_id,hospital_id,department_id,role_id,first_name,last_name,email,phone,password_hash,job_title,is_active)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,1)
+    ON CONFLICT (id) DO NOTHING
   `);
 
   const roleByName = Object.fromEntries(ROLES.map(r => [r.name, r.id]));
@@ -123,7 +124,7 @@ export async function seed() {
   for (const u of DEMO_USERS_INPUT) {
     const hash = bcrypt.hashSync(u.password, ROUNDS);
     const uid  = `user-${u.email.split("@")[0]}`;
-    insertUser.run(uid, TENANT_ID, HOSPITAL_ID, deptByCode[u.dept], roleByName[u.role], u.first, u.last, u.email, null, hash, u.title);
+    await insertUser.run(uid, TENANT_ID, HOSPITAL_ID, deptByCode[u.dept], roleByName[u.role], u.first, u.last, u.email, null, hash, u.title);
   }
 
   // ── Demo patients ───────────────────────────────────────────────────────────
@@ -136,13 +137,14 @@ export async function seed() {
   ];
 
   const insertPatient = db.prepare(`
-    INSERT OR IGNORE INTO patients
+    INSERT INTO patients
       (id,tenant_id,hospital_id,mrn,national_id,first_name,last_name,date_of_birth,gender,phone,
        insurance_provider,insurance_number,blood_group,allergies,chronic_conditions,status,registered_by)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'active','user-admin')
+    ON CONFLICT (id) DO NOTHING
   `);
   for (const p of demoPatients) {
-    insertPatient.run(p.id, TENANT_ID, HOSPITAL_ID, p.mrn, p.nid, p.first, p.last, p.dob, p.gender, p.phone, p.insurance, p.ins_no, p.blood, p.allergies, p.conditions);
+    await insertPatient.run(p.id, TENANT_ID, HOSPITAL_ID, p.mrn, p.nid, p.first, p.last, p.dob, p.gender, p.phone, p.insurance, p.ins_no, p.blood, p.allergies, p.conditions);
   }
 
   console.log("✅  Seed complete — demo users and patients inserted");
@@ -153,7 +155,7 @@ export async function seed() {
 }
 
 // Allow running directly: node src/database/seed.js
-if (process.argv[1].includes("seed.js")) {
-  runMigrations();
+if (process.argv[1]?.includes("seed.js")) {
+  await runMigrations();
   await seed();
 }

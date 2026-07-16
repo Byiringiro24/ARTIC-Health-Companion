@@ -1,4 +1,5 @@
-﻿export default function SuppliersPage() {
-  return null;
-}
+import { RoutePageShell } from "@/components/RoutePageShell";
 
+export default function Page() {
+  return <RoutePageShell />;
+}
