@@ -1,0 +1,93 @@
+# ─── ARTIC Health Companion — Docker Compose ─────────────────────────────────
+# Safe to run alongside the existing ARTIC VMS project on the same server.
+#
+# Port allocation (NO conflicts with VMS project):
+#   VMS Backend  → 4000   HMS Backend  → 4001  ✓
+#   VMS Frontend → 3000   HMS Frontend → 3001  ✓
+#   VMS MQTT     → 1883   HMS N/A              ✓
+#   Shared PostgreSQL → 5432 (same instance, different DB)
+#   Shared Redis      → 6379 (same instance, different key prefix)
+#
+# PostgreSQL and Redis are NOT started here — they are already running
+# from the VMS docker-compose. We connect to them from the host network.
+# If you want fully isolated databases, uncomment the postgres/redis services below.
+
+version: "3.9"
+
+services:
+  # ── HMS Backend (Express + Node.js) ─────────────────────────────────────────
+  hms-backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: artic-hms-backend
+    restart: unless-stopped
+    ports:
+      - "4001:4001"          # HMS API — different from VMS port 4000
+    environment:
+      PORT: "4001"
+      NODE_ENV: "${NODE_ENV:-production}"
+      DATABASE_URL: "${HMS_DATABASE_URL}"
+      DATABASE_PATH: "/app/data/artic_health.db"
+      REDIS_URL: "${REDIS_URL:-redis://host.docker.internal:6379}"
+      REDIS_PREFIX: "hms:"
+      JWT_ACCESS_SECRET: "${HMS_JWT_ACCESS_SECRET}"
+      JWT_REFRESH_SECRET: "${HMS_JWT_REFRESH_SECRET}"
+      JWT_ACCESS_EXPIRES: "15m"
+      JWT_REFRESH_EXPIRES: "7d"
+      BCRYPT_ROUNDS: "12"
+      CORS_ORIGIN: "${HMS_CORS_ORIGIN}"
+      RATE_LIMIT_MAX: "200"
+      DEFAULT_FACILITY: "${DEFAULT_FACILITY:-Kigali District Hospital}"
+      DEFAULT_TIMEZONE: "Africa/Kigali"
+      DEFAULT_CURRENCY: "RWF"
+    volumes:
+      - hms_data:/app/data          # SQLite database persistence
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # allows container to reach host postgres/redis
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4001/health',(r)=>{process.exit(r.statusCode===200?0:1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── HMS Frontend (Next.js) ───────────────────────────────────────────────────
+  hms-frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "${HMS_API_URL:-http://localhost:4001}"
+    container_name: artic-hms-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3000"          # HMS frontend on 3001 — different from VMS port 3000
+    environment:
+      NEXT_PUBLIC_API_URL: "${HMS_API_URL:-http://localhost:4001}"
+      NODE_ENV: "${NODE_ENV:-production}"
+    depends_on:
+      hms-backend:
+        condition: service_healthy
+
+  # ─── OPTIONAL: Dedicated PostgreSQL for HMS (uncomment if you want isolation) ─
+  # hms-postgres:
+  #   image: postgres:16-alpine
+  #   container_name: artic-hms-postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_DB: artic_hms
+  #     POSTGRES_USER: artic_hms_user
+  #     POSTGRES_PASSWORD: "${HMS_DB_PASSWORD}"
+  #   ports:
+  #     - "5433:5432"          # 5433 to avoid conflict with VMS on 5432
+  #   volumes:
+  #     - hms_postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U artic_hms_user -d artic_hms"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  hms_data:
+  # hms_postgres_data:    # uncomment if using dedicated postgres above

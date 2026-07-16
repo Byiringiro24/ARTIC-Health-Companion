@@ -1,0 +1,30 @@
+# ─── ARTIC Health Companion — Frontend Dockerfile ────────────────────────────
+# Next.js standalone output build
+
+FROM node:24-alpine AS builder
+WORKDIR /app
+
+ARG NEXT_PUBLIC_API_URL=http://localhost:4001
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# ── Runner stage ──────────────────────────────────────────────────────────────
+FROM node:24-alpine AS runner
+WORKDIR /app
+
+RUN addgroup -g 1001 -S artic && adduser -u 1001 -S artic -G artic
+
+COPY --from=builder --chown=artic:artic /app/.next ./.next
+COPY --from=builder --chown=artic:artic /app/node_modules ./node_modules
+COPY --from=builder --chown=artic:artic /app/package.json ./
+
+USER artic
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

@@ -1,0 +1,37 @@
+# ─── ARTIC Health Companion — Backend Dockerfile ─────────────────────────────
+# Multi-stage build: builder → runner
+# Non-root user, minimal attack surface
+
+FROM node:24-alpine AS builder
+WORKDIR /app
+
+# Install only production dependencies
+COPY package*.json ./
+RUN npm ci --omit=dev --ignore-scripts
+
+# Copy source
+COPY src/ ./src/
+
+# ── Runner stage ──────────────────────────────────────────────────────────────
+FROM node:24-alpine AS runner
+WORKDIR /app
+
+# Security: run as non-root
+RUN addgroup -g 1001 -S artic && adduser -u 1001 -S artic -G artic
+
+# Create data directory with correct ownership (SQLite DB lives here)
+RUN mkdir -p /app/data && chown artic:artic /app/data
+
+# Copy from builder
+COPY --from=builder --chown=artic:artic /app/node_modules ./node_modules
+COPY --from=builder --chown=artic:artic /app/src ./src
+COPY --chown=artic:artic package.json ./
+
+USER artic
+
+EXPOSE 4001
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:4001/health',(r)=>{process.exit(r.statusCode===200?0:1)})"
+
+CMD ["node", "src/index.js"]
