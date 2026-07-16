@@ -25,7 +25,7 @@ services:
     environment:
       PORT: "4001"
       NODE_ENV: "${NODE_ENV:-production}"
-      DATABASE_URL: "${HMS_DATABASE_URL:-postgresql://Byiringiro:Artic%242026@host.docker.internal:5433/artic_hms?schema=public&sslmode=disable}"
+      DATABASE_URL: "${HMS_DATABASE_URL:-postgresql://Byiringiro:Artic%25242026@host.docker.internal:5433/artic_hms?schema=public&sslmode=disable}"
       REDIS_URL: "${REDIS_URL:-redis://host.docker.internal:6380}"
       REDIS_PREFIX: "hms:"
       JWT_ACCESS_SECRET: "${HMS_JWT_ACCESS_SECRET:-artic-production-jwt-secret-min-32-chars-2026}"
