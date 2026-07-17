@@ -1,0 +1,16 @@
+import { Router } from "express";
+import { authenticate } from "../../middleware/auth.js";
+import * as ctrl from "./inventory.controller.js";
+const router = Router();
+router.use(authenticate);
+router.get("/",                        ctrl.list);
+router.get("/low-stock",               ctrl.lowStock);
+router.get("/:id",                     ctrl.getOne);
+router.post("/",                       ctrl.create);
+router.patch("/:id",                   ctrl.update);
+router.post("/:id/issue",              ctrl.issue);
+router.post("/:id/receive",            ctrl.receive);
+router.get("/purchase-requests",       ctrl.listPR);
+router.post("/purchase-requests",      ctrl.createPR);
+router.patch("/purchase-requests/:id/approve", ctrl.approvePR);
+export default router;

@@ -152,6 +152,93 @@ export async function seed() {
   for (const u of DEMO_USERS_INPUT) {
     console.log(`   ${u.email.padEnd(32)} password: ${u.password}`);
   }
+
+  // ── Demo appointments ───────────────────────────────────────────────────────
+  const today = new Date().toISOString().slice(0, 10);
+  const demoAppts = [
+    { id:"appt-001", patient_id:"p-001", doctor_id:"user-doctor", department_id:"dept-002", appointment_date:today, start_time:"08:30", type:"follow-up",    priority:"routine",   status:"checked-in",  queue_number:"IM-014",  chief_complaint:"Hypertension review",    walk_in:0 },
+    { id:"appt-002", patient_id:"p-004", doctor_id:"user-doctor", department_id:"dept-003", appointment_date:today, start_time:"08:00", type:"emergency",    priority:"emergency", status:"in-progress", queue_number:"ER-001",  chief_complaint:"Trauma, shortness of breath", walk_in:1 },
+    { id:"appt-003", patient_id:"p-002", doctor_id:"user-doctor", department_id:"dept-004", appointment_date:today, start_time:"09:10", type:"consultation", priority:"urgent",    status:"checked-in",  queue_number:"PD-006",  chief_complaint:"Fever and cough",       walk_in:0 },
+    { id:"appt-004", patient_id:"p-003", doctor_id:"user-director",department_id:"dept-002",appointment_date:today, start_time:"10:00", type:"follow-up",    priority:"urgent",    status:"in-progress", queue_number:"WARD",    chief_complaint:"Diabetes management",   walk_in:0 },
+    { id:"appt-005", patient_id:"p-005", doctor_id:"user-doctor", department_id:"dept-006", appointment_date:today, start_time:"11:00", type:"consultation", priority:"routine",   status:"scheduled",   queue_number:"MAT-003", chief_complaint:"Antenatal care visit",  walk_in:0 },
+  ];
+  const insAppt = db.prepare(`INSERT INTO appointments (id,tenant_id,hospital_id,patient_id,doctor_id,department_id,appointment_date,start_time,type,priority,status,queue_number,chief_complaint,walk_in,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`);
+  for (const a of demoAppts) {
+    await insAppt.run(a.id,TENANT_ID,HOSPITAL_ID,a.patient_id,a.doctor_id,a.department_id,a.appointment_date,a.start_time,a.type,a.priority,a.status,a.queue_number,a.chief_complaint,a.walk_in,"user-admin","user-admin");
+  }
+
+  // ── Demo lab requests ───────────────────────────────────────────────────────
+  const demoLabs = [
+    { id:"lab-001", patient_id:"p-004", appointment_id:"appt-002", ordered_by:"user-doctor", test_name:"Full Blood Count",  test_panel:"Hematology",   sample_type:"EDTA Blood",        barcode:"SP-9901", urgency:"stat",    status:"completed",  result_value:"7.2",  result_unit:"g/dL",  reference_range:"12–16 g/dL", result_flag:"Critical", result_at:today },
+    { id:"lab-002", patient_id:"p-003", appointment_id:"appt-004", ordered_by:"user-director",test_name:"HbA1c",            test_panel:"Biochemistry", sample_type:"EDTA Blood",        barcode:"SP-9902", urgency:"routine", status:"completed",  result_value:"9.1",  result_unit:"%",     reference_range:"< 7%",       result_flag:"High",     result_at:today },
+    { id:"lab-003", patient_id:"p-002", appointment_id:"appt-003", ordered_by:"user-doctor", test_name:"Malaria RDT",      test_panel:"Parasitology", sample_type:"Finger-prick Blood", barcode:"SP-9903", urgency:"urgent",  status:"in-progress",result_value:null,   result_unit:null,    reference_range:null,         result_flag:null,        result_at:null },
+    { id:"lab-004", patient_id:"p-001", appointment_id:"appt-001", ordered_by:"user-doctor", test_name:"Renal Function",   test_panel:"Biochemistry", sample_type:"Serum",             barcode:"SP-9904", urgency:"routine", status:"ordered",    result_value:null,   result_unit:null,    reference_range:null,         result_flag:null,        result_at:null },
+  ];
+  const insLab = db.prepare(`INSERT INTO lab_requests (id,tenant_id,hospital_id,patient_id,appointment_id,ordered_by,test_name,test_panel,sample_type,barcode,urgency,status,result_value,result_unit,reference_range,result_flag,result_at,ordered_at,collected_at,technician_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'),?) ON CONFLICT(id) DO NOTHING`);
+  for (const l of demoLabs) {
+    await insLab.run(l.id,TENANT_ID,HOSPITAL_ID,l.patient_id,l.appointment_id,l.ordered_by,l.test_name,l.test_panel,l.sample_type,l.barcode,l.urgency,l.status,l.result_value,l.result_unit,l.reference_range,l.result_flag,l.result_at,"user-lab");
+  }
+
+  // ── Demo drug catalogue & inventory ─────────────────────────────────────────
+  const demoDrugs = [
+    { id:"drug-001", generic_name:"Amoxicillin",               category:"Antibiotic",   controlled:0 },
+    { id:"drug-002", generic_name:"Insulin Glargine",          category:"Diabetes",     controlled:0 },
+    { id:"drug-003", generic_name:"Artemether-Lumefantrine",   category:"Antimalarial", controlled:0 },
+    { id:"drug-004", generic_name:"Morphine Sulfate",          category:"Analgesic",    controlled:1 },
+    { id:"drug-005", generic_name:"Metformin HCl",             category:"Diabetes",     controlled:0 },
+    { id:"drug-006", generic_name:"Amlodipine",                category:"Cardiovascular",controlled:0 },
+  ];
+  const insDrug = db.prepare(`INSERT INTO drug_catalogue (id,tenant_id,generic_name,category,controlled,reorder_level) VALUES(?,?,?,?,?,50) ON CONFLICT(id) DO NOTHING`);
+  for (const d of demoDrugs) await insDrug.run(d.id,TENANT_ID,d.generic_name,d.category,d.controlled);
+
+  const demoDrugInv = [
+    { id:"dinv-001", drug_id:"drug-001", batch:"AMX-2602", expiry:"2026-11-30", quantity:420, unit_cost:85,   selling_price:120,  location:"Pharmacy Store A" },
+    { id:"dinv-002", drug_id:"drug-002", batch:"INS-2604", expiry:"2026-09-12", quantity:36,  unit_cost:4200, selling_price:5500, location:"2-8°C Refrigerator" },
+    { id:"dinv-003", drug_id:"drug-003", batch:"ACT-2603", expiry:"2027-03-01", quantity:245, unit_cost:1800, selling_price:2500, location:"Pharmacy Store A" },
+    { id:"dinv-004", drug_id:"drug-004", batch:"MOR-2601", expiry:"2026-08-15", quantity:18,  unit_cost:3500, selling_price:5000, location:"Controlled Cabinet" },
+    { id:"dinv-005", drug_id:"drug-005", batch:"MET-2602", expiry:"2027-05-20", quantity:680, unit_cost:55,   selling_price:80,   location:"Pharmacy Store B" },
+    { id:"dinv-006", drug_id:"drug-006", batch:"AML-2603", expiry:"2027-02-10", quantity:320, unit_cost:95,   selling_price:140,  location:"Pharmacy Store A" },
+  ];
+  const insDInv = db.prepare(`INSERT INTO drug_inventory (id,tenant_id,hospital_id,drug_id,batch_number,expiry_date,quantity,unit_cost,selling_price,location,received_by) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`);
+  for (const i of demoDrugInv) await insDInv.run(i.id,TENANT_ID,HOSPITAL_ID,i.drug_id,i.batch,i.expiry,i.quantity,i.unit_cost,i.selling_price,i.location,"user-admin");
+
+  // ── Demo prescriptions ───────────────────────────────────────────────────────
+  const demoRx = [
+    { id:"rx-001", patient_id:"p-001", appointment_id:"appt-001", doctor_id:"user-doctor", status:"active",
+      items: JSON.stringify([{drug:"Amlodipine",genericName:"Amlodipine",dosage:"5mg",route:"Oral",frequency:"OD",duration:"30 days",quantity:30,instructions:"Take once daily with water"},{drug:"Hydrochlorothiazide",genericName:"Hydrochlorothiazide",dosage:"25mg",route:"Oral",frequency:"OD",duration:"30 days",quantity:30,instructions:"Take in the morning"}]) },
+    { id:"rx-002", patient_id:"p-003", appointment_id:"appt-004", doctor_id:"user-director", status:"dispensed",
+      items: JSON.stringify([{drug:"Metformin",genericName:"Metformin HCl",dosage:"500mg",route:"Oral",frequency:"BID",duration:"30 days",quantity:60,instructions:"Take with food"},{drug:"Glibenclamide",genericName:"Glibenclamide",dosage:"5mg",route:"Oral",frequency:"OD",duration:"30 days",quantity:30,instructions:"Take before breakfast"}]) },
+  ];
+  const insRx = db.prepare(`INSERT INTO prescriptions (id,tenant_id,hospital_id,patient_id,appointment_id,doctor_id,status,items) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`);
+  for (const r of demoRx) await insRx.run(r.id,TENANT_ID,HOSPITAL_ID,r.patient_id,r.appointment_id,r.doctor_id,r.status,r.items);
+
+  // ── Demo invoices ────────────────────────────────────────────────────────────
+  const demoInvoices = [
+    { id:"inv-001", invoice_number:"INV-2026-1101", patient_id:"p-001", appointment_id:"appt-001", payer:"RSSB",    subtotal:26200, insurance_cover:13100, patient_copay:13100, total:26200, paid:13100, balance:13100, status:"partially-paid" },
+    { id:"inv-002", invoice_number:"INV-2026-1102", patient_id:"p-002", appointment_id:"appt-003", payer:"Mutuelle",subtotal:8950,  insurance_cover:7607,  patient_copay:1343,  total:8950,  paid:0,     balance:1343,  status:"unpaid" },
+    { id:"inv-003", invoice_number:"INV-2026-1103", patient_id:"p-003", appointment_id:"appt-004", payer:"Private", subtotal:186500,insurance_cover:0,     patient_copay:186500,total:186500,paid:186500,balance:0,     status:"paid" },
+  ];
+  const insInv = db.prepare(`INSERT INTO invoices (id,invoice_number,tenant_id,hospital_id,patient_id,appointment_id,payer,subtotal,insurance_cover,patient_copay,total,paid,balance,status,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`);
+  for (const i of demoInvoices) await insInv.run(i.id,i.invoice_number,TENANT_ID,HOSPITAL_ID,i.patient_id,i.appointment_id,i.payer,i.subtotal,i.insurance_cover,i.patient_copay,i.total,i.paid,i.balance,i.status,"user-admin");
+
+  // Invoice items for INV-2026-1101
+  const insII = db.prepare(`INSERT INTO invoice_items (id,invoice_id,service_name,category,quantity,unit_price,total,insurance_cover,patient_copay) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`);
+  await insII.run("ii-001","inv-001","Specialist Consultation","Consultation",1,12000,12000,6000,6000);
+  await insII.run("ii-002","inv-001","Renal Function Panel","Laboratory",1,8200,8200,4100,4100);
+  await insII.run("ii-003","inv-001","Amlodipine 5mg x 30","Pharmacy",30,80,2400,1200,1200);
+  await insII.run("ii-004","inv-001","BP Monitoring","Nursing",1,3600,3600,1800,1800);
+
+  // ── Demo notifications ───────────────────────────────────────────────────────
+  const demoNotifs = [
+    { id:"notif-001", user_id:"user-doctor",  patient_id:"p-004", type:"danger",  title:"Critical Lab Result",      message:"Patrick Mugenzi — Hemoglobin 7.2 g/dL. Immediate clinical review required.", channel:"in-app" },
+    { id:"notif-002", user_id:"user-store",   patient_id:null,    type:"warning", title:"Low Stock Alert",           message:"Insulin Glargine stock at 36 units — below reorder level of 50.", channel:"in-app" },
+    { id:"notif-003", user_id:"user-accounts",patient_id:"p-003", type:"success", title:"Insurance Claim Approved",  message:"Claim INV-2026-1103 approved. RWF 186,500 to be reimbursed.", channel:"in-app" },
+    { id:"notif-004", user_id:"user-admin",   patient_id:null,    type:"info",    title:"System Backup Complete",    message:"Automated nightly backup completed successfully.", channel:"in-app" },
+  ];
+  const insN = db.prepare(`INSERT INTO notifications (id,tenant_id,user_id,patient_id,type,title,message,channel,status) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`);
+  for (const n of demoNotifs) await insN.run(n.id,TENANT_ID,n.user_id,n.patient_id,n.type,n.title,n.message,n.channel,"delivered");
+
+  console.log("✅  Clinical demo data seeded — appointments, labs, prescriptions, invoices, notifications");
 }
 
 // Allow running directly: node src/database/seed.js

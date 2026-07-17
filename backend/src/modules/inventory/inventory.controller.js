@@ -1,0 +1,13 @@
+import { asyncHandler } from "../../middleware/errorHandler.js";
+import * as svc from "./inventory.service.js";
+const t=r=>r.user?.tenantId||"tenant-001",h=r=>r.user?.hospitalId||"hosp-001";
+export const list       = asyncHandler(async(req,res)=>res.json(await svc.getItems({...req.query,tenantId:t(req),hospitalId:h(req)})));
+export const getOne     = asyncHandler(async(req,res)=>res.json(await svc.getItemById(req.params.id)));
+export const create     = asyncHandler(async(req,res)=>res.status(201).json(await svc.createItem(req.body,req.user?.id,t(req),h(req))));
+export const update     = asyncHandler(async(req,res)=>res.json(await svc.updateItem(req.params.id,req.body)));
+export const issue      = asyncHandler(async(req,res)=>res.json(await svc.issueStock(req.params.id,req.body.quantity,req.body.destination,req.user?.id)));
+export const receive    = asyncHandler(async(req,res)=>res.json(await svc.receiveStock(req.params.id,req.body.quantity,req.body.reference,req.user?.id)));
+export const lowStock   = asyncHandler(async(req,res)=>res.json(await svc.getLowStockAlerts(h(req))));
+export const listPR     = asyncHandler(async(req,res)=>res.json(await svc.getPurchaseRequests({...req.query,tenantId:t(req),hospitalId:h(req)})));
+export const createPR   = asyncHandler(async(req,res)=>res.status(201).json(await svc.createPurchaseRequest(req.body,req.user?.id,t(req),h(req))));
+export const approvePR  = asyncHandler(async(req,res)=>res.json(await svc.approvePurchaseRequest(req.params.id,req.user?.id)));

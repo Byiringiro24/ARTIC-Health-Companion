@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { authenticate } from "../../middleware/auth.js";
+import * as ctrl from "./insurance.controller.js";
+const router = Router();
+router.use(authenticate);
+router.get("/",              ctrl.list);
+router.get("/:id",           ctrl.getOne);
+router.post("/",             ctrl.create);
+router.patch("/:id/submit",  ctrl.submit);
+router.patch("/:id/status",  ctrl.updateStatus);
+export default router;

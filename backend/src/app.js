@@ -1,119 +1,120 @@
 /**
- * ARTIC Health Companion — Express Application
- * Phase 1+2+3: Foundation, Database, Authentication
+ * ARTIC Health Companion — Express Application v2.0
+ * Full HMS: Auth, Users, Patients, Appointments, EMR, Lab, Pharmacy,
+ * Billing, Insurance, Inventory, Radiology, Reports, Notifications
  */
 
 import "dotenv/config";
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import morgan from "morgan";
-import cookieParser from "cookie-parser";
-import { config } from "./config/index.js";
-import { runMigrations } from "./database/migrate.js";
-import { seed } from "./database/seed.js";
-import { getDb } from "./database/connection.js";
+import express        from "express";
+import cors           from "cors";
+import helmet         from "helmet";
+import morgan         from "morgan";
+import cookieParser   from "cookie-parser";
+
+import { config }          from "./config/index.js";
+import { getDb }           from "./database/connection.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
-import { globalLimiter } from "./middleware/rateLimiter.js";
+import { globalLimiter }   from "./middleware/rateLimiter.js";
 
-// ── Route imports ─────────────────────────────────────────────────────────────
-import authRoutes      from "./modules/auth/auth.routes.js";
-import usersRoutes     from "./modules/users/users.routes.js";
-import patientsRoutes  from "./modules/patients/patients.routes.js";
-import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
+// ── Route modules ─────────────────────────────────────────────────────────────
+import authRoutes           from "./modules/auth/auth.routes.js";
+import usersRoutes          from "./modules/users/users.routes.js";
+import patientsRoutes       from "./modules/patients/patients.routes.js";
+import dashboardRoutes      from "./modules/dashboard/dashboard.routes.js";
+import appointmentsRoutes   from "./modules/appointments/appointments.routes.js";
+import medicalRecordsRoutes from "./modules/medical-records/medical-records.routes.js";
+import laboratoryRoutes     from "./modules/laboratory/laboratory.routes.js";
+import pharmacyRoutes       from "./modules/pharmacy/pharmacy.routes.js";
+import billingRoutes        from "./modules/billing/billing.routes.js";
+import insuranceRoutes      from "./modules/insurance/insurance.routes.js";
+import inventoryRoutes      from "./modules/inventory/inventory.routes.js";
+import radiologyRoutes      from "./modules/radiology/radiology.routes.js";
+import notificationsRoutes  from "./modules/notifications/notifications.routes.js";
+import reportsRoutes        from "./modules/reports/reports.routes.js";
 
-// Legacy data import (kept for backward compatibility with existing frontend)
-import { appointments, auditLogs, kpis, modules, patients as legacyPatients, roles, users as legacyUsers } from "./data.js";
+// ── Legacy shim data (in-memory, for backward-compat endpoints) ───────────────
+import { modules, roles, users as legacyUsers, auditLogs } from "./data.js";
 
+// ─────────────────────────────────────────────────────────────────────────────
 const app = express();
 
-// ── Security headers ──────────────────────────────────────────────────────────
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  contentSecurityPolicy: false,
-}));
+// Security headers
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" }, contentSecurityPolicy: false }));
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
+// CORS
 app.use(cors({
-  origin:      config.cors.origin,
-  credentials: true,
-  methods:     ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+  origin:         config.cors.origin,
+  credentials:    true,
+  methods:        ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
   allowedHeaders: ["Content-Type","Authorization","X-Requested-With"],
 }));
 
-// ── Body parsing ──────────────────────────────────────────────────────────────
+// Body parsing
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ── Request logging ───────────────────────────────────────────────────────────
+// Logging
 if (config.isDev) app.use(morgan("dev"));
 else              app.use(morgan("combined"));
 
-// ── Global rate limit ─────────────────────────────────────────────────────────
+// Global rate limit
 app.use(globalLimiter);
 
-// ── Health check (no auth) ────────────────────────────────────────────────────
-app.get("/health", async (req, res) => {
-  const db = getDb();
+// ── Health check ──────────────────────────────────────────────────────────────
+app.get("/health", async (_req, res) => {
   let dbStatus = "ok";
-  try { await db.prepare("SELECT 1").get(); } catch { dbStatus = "error"; }
-
+  try { await getDb().prepare("SELECT 1").get(); } catch { dbStatus = "error"; }
   res.json({
-    status:    "ok",
-    service:   "ARTIC Health Companion API",
-    version:   "1.0.0",
-    phase:     "Phase 1+2+3 — Foundation, Database, Authentication",
-    timestamp: new Date().toISOString(),
-    database:  dbStatus,
+    status:      "ok",
+    service:     "ARTIC Health Companion API",
+    version:     "2.0.0",
+    phase:       "Full HMS — Appointments, EMR, Lab, Pharmacy, Billing, Insurance, Inventory, Radiology, Notifications, Reports",
+    timestamp:   new Date().toISOString(),
+    database:    dbStatus,
     environment: config.nodeEnv,
   });
 });
 
-// ── API v1 routes (new production routes) ─────────────────────────────────────
-app.use("/api/auth",      authRoutes);
-app.use("/api/users",     usersRoutes);
-app.use("/api/patients",  patientsRoutes);
-app.use("/api/dashboard", dashboardRoutes);
+// ── API routes ────────────────────────────────────────────────────────────────
+app.use("/api/auth",            authRoutes);
+app.use("/api/users",           usersRoutes);
+app.use("/api/patients",        patientsRoutes);
+app.use("/api/dashboard",       dashboardRoutes);
+app.use("/api/appointments",    appointmentsRoutes);
+app.use("/api/medical-records", medicalRecordsRoutes);
+app.use("/api/laboratory",      laboratoryRoutes);
+app.use("/api/pharmacy",        pharmacyRoutes);
+app.use("/api/billing",         billingRoutes);
+app.use("/api/insurance",       insuranceRoutes);
+app.use("/api/inventory",       inventoryRoutes);
+app.use("/api/radiology",       radiologyRoutes);
+app.use("/api/notifications",   notificationsRoutes);
+app.use("/api/reports",         reportsRoutes);
 
-// ── Legacy compatibility routes ───────────────────────────────────────────────
-// These mirror the old server.js endpoints so the existing frontend continues
-// working without any changes while we migrate.
-
-function getLegacyUser(req) {
-  const header = req.headers.authorization || "";
-  const token  = header.replace("Bearer ", "");
+// ── Legacy shim routes (keep existing frontend working) ───────────────────────
+function legacyUser(req) {
+  const token = (req.headers.authorization || "").replace("Bearer ", "");
   return legacyUsers.find(u => u.id === token || u.email === token) || null;
 }
-
 function visibleModules(user) {
   if (!user) return [];
   const role = roles[user.role];
   return role ? modules.filter(m => role.modules.includes(m.key)) : [];
 }
 
-app.get("/api/roles",   (req, res) => res.json(roles));
-app.get("/api/modules", (req, res) => {
+app.get("/api/roles",   (_req, res) => res.json(roles));
+app.get("/api/modules", (req,  res) => {
   const role = req.query.role;
-  if (role && roles[role]) return res.json(modules.filter(m => roles[role].modules.includes(m.key)));
-  res.json(modules);
+  res.json(role && roles[role] ? modules.filter(m => roles[role].modules.includes(m.key)) : modules);
 });
 app.get("/api/me", (req, res) => {
-  const user = getLegacyUser(req);
+  const user = legacyUser(req);
   if (!user) return res.status(401).json({ error: "Missing or invalid bearer token" });
   const { password, ...safe } = user;
   res.json({ user: safe, role: roles[user.role], modules: visibleModules(user) });
 });
-app.get("/api/appointments", (req, res) => {
-  const user = getLegacyUser(req);
-  if (user?.role === "patient") return res.json(appointments.filter(a => a.patientId === user.patientId));
-  res.json(appointments);
-});
-app.get("/api/audit", (req, res) => res.json(auditLogs));
-app.get("/api/dashboard-legacy", (req, res) => {
-  const user = getLegacyUser(req);
-  res.json({ kpis, queue: appointments, modules: visibleModules(user), compliance: ["MOH reporting","PBF indicators","FHIR/ICD-10 readiness","Rwanda Data Protection Law alignment"] });
-});
+app.get("/api/audit", (_req, res) => res.json(auditLogs));
 
 // ── 404 + error handlers ──────────────────────────────────────────────────────
 app.use(notFoundHandler);

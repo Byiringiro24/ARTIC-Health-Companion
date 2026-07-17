@@ -13,8 +13,6 @@ import {
 } from "recharts";
 
 import { getSession, logout } from "@/lib/auth";
-import { getPatients } from "@/lib/api/patients";
-import { getAppointments } from "@/lib/api/appointments";
 import {
   auditLogs, beds, bloodUnits, demoUsers, kpis,
   navModules, notifications, patientTimeline, queueEntries,
@@ -22,7 +20,7 @@ import {
 } from "@/lib/data";
 import {
   usePatientStore, useAppointmentStore, useInventoryStore,
-  useLabStore, useBillingStore, useToast,
+  useLabStore, useBillingStore, useToast, useNotificationStore, useKPIStore,
 } from "@/lib/store";
 import { Modal } from "@/components/ui/Modal";
 import { DataTable, SectionHeader, StatCard } from "@/components/ui/shared";
@@ -88,8 +86,12 @@ export function DashboardApp() {
   const [query, setQuery] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { setPatients } = usePatientStore();
-  const { setAppointments } = useAppointmentStore();
+  const { setPatients, fetchPatients } = usePatientStore();
+  const { setAppointments, fetchAppointments } = useAppointmentStore();
+  const { fetchLabRequests } = useLabStore();
+  const { fetchInvoices } = useBillingStore();
+  const { fetchNotifications, unreadCount } = useNotificationStore();
+  const { kpis: liveKpis, fetchKPIs } = useKPIStore();
 
   useEffect(() => {
     const session = getSession();
@@ -99,37 +101,23 @@ export function DashboardApp() {
     setActiveModule(roleDef.modules[0] ?? "overview");
   }, [router]);
 
+  // Hydrate real data from API on mount (falls back to demo data silently)
   useEffect(() => {
-    const accessToken = user?.accessToken;
-    if (!accessToken) return;
-
-    async function hydrateData() {
-      try {
-        const patients = await getPatients(accessToken);
-        if (Array.isArray(patients) && patients.length > 0) {
-          setPatients(patients);
-        }
-      } catch (error) {
-        // Keep demo patient data if backend hydration fails.
-      }
-
-      try {
-        const appointments = await getAppointments(accessToken);
-        if (Array.isArray(appointments) && appointments.length > 0) {
-          setAppointments(appointments);
-        }
-      } catch (error) {
-        // Keep demo appointment data if backend hydration fails.
-      }
-    }
-
-    hydrateData();
-  }, [setAppointments, setPatients, user?.accessToken]);
+    if (!user?.accessToken) return;
+    const today = new Date().toISOString().slice(0, 10);
+    fetchPatients();
+    fetchAppointments({ date: today, limit: "100" });
+    fetchLabRequests({ limit: "50" });
+    fetchInvoices({ limit: "50" });
+    fetchNotifications();
+    fetchKPIs();
+  }, [user?.accessToken]);
 
   const availableModules = useMemo(() => {
     if (!user) return [];
     return roleDefinitions[user.role].modules.map((key) => navModules[key]);
   }, [user]);
+
 
   const handleLogout = useCallback(() => {
     logout();
@@ -150,7 +138,7 @@ export function DashboardApp() {
 
   const role   = roleDefinitions[user.role] ?? roleDefinitions.doctor;
   const active = navModules[activeModule];
-  const unread = notifications.filter((n) => n.type === "danger" || n.type === "warning").length;
+  const unread = unreadCount || notifications.filter((n) => n.type === "danger" || n.type === "warning").length;
 
   return (
     <main className="app-shell">

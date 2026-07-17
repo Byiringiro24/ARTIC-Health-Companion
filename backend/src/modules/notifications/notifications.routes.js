@@ -1,0 +1,10 @@
+import { Router } from "express";
+import { authenticate } from "../../middleware/auth.js";
+import * as ctrl from "./notifications.controller.js";
+const router = Router();
+router.use(authenticate);
+router.get("/",                  ctrl.list);
+router.get("/unread-count",      ctrl.unread);
+router.patch("/:id/read",        ctrl.markRead);
+router.patch("/mark-all-read",   ctrl.markAll);
+export default router;

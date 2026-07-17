@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { authenticate } from "../../middleware/auth.js";
+import * as ctrl from "./reports.controller.js";
+const router = Router();
+router.use(authenticate);
+router.get("/kpis",        ctrl.kpis);
+router.get("/revenue",     ctrl.revenue);
+router.get("/weekly",      ctrl.weekly);
+router.get("/moh",         ctrl.moh);
+router.get("/audit",       ctrl.auditLogs);
+export default router;
