@@ -1,5 +1,5 @@
-#!/bin/bash
-# ─── ARTIC HMS — Server Setup Script ─────────────────────────────────────────
+﻿#!/bin/bash
+# â”€â”€â”€ ARTIC HMS â€” Server Setup Script â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Run this once on the server after git clone / git pull
 # Usage: bash scripts/server-setup.sh
 # Safe to run multiple times.
@@ -10,7 +10,7 @@ cd /home/artic/artic-hms
 echo "=== ARTIC HMS Server Setup ==="
 echo ""
 
-# ── 1. Check Docker containers (postgres + redis) ─────────────────────────────
+# â”€â”€ 1. Check Docker containers (postgres + redis) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo "1. Checking HMS Docker containers..."
 if ! docker ps | grep -q "artic-hms-postgres"; then
   echo "   Starting HMS databases..."
@@ -18,23 +18,23 @@ if ! docker ps | grep -q "artic-hms-postgres"; then
   echo "   Waiting 10s for postgres to initialise..."
   sleep 10
 else
-  echo "   postgres: running ✓"
+  echo "   postgres: running âœ“"
 fi
 if ! docker ps | grep -q "artic-hms-redis"; then
   echo "   Starting HMS redis..."
   cd docker && docker compose up -d hms-redis && cd ..
 else
-  echo "   redis: running ✓"
+  echo "   redis: running âœ“"
 fi
 
-# ── 2. Verify postgres connectivity ───────────────────────────────────────────
+# â”€â”€ 2. Verify postgres connectivity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo ""
 echo "2. Verifying PostgreSQL..."
 docker exec artic-hms-postgres psql -U Byiringiro -d artic_hms -c "SELECT 1 as ok;" -t 2>/dev/null \
-  && echo "   PostgreSQL: connected ✓" \
-  || echo "   WARNING: PostgreSQL connection failed — check container"
+  && echo "   PostgreSQL: connected âœ“" \
+  || echo "   WARNING: PostgreSQL connection failed â€” check container"
 
-# ── 3. Write backend .env ─────────────────────────────────────────────────────
+# â”€â”€ 3. Write backend .env â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo ""
 echo "3. Writing backend/.env..."
 cat > /home/artic/artic-hms/backend/.env << 'ENVEOF'
@@ -56,16 +56,16 @@ DEFAULT_FACILITY=Kigali District Hospital
 DEFAULT_TIMEZONE=Africa/Kigali
 DEFAULT_CURRENCY=RWF
 ENVEOF
-echo "   .env written ✓"
+echo "   .env written âœ“"
 
-# ── 4. Install backend dependencies ───────────────────────────────────────────
+# â”€â”€ 4. Install backend dependencies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo ""
 echo "4. Installing backend dependencies..."
 cd /home/artic/artic-hms/backend
 npm install --omit=dev --silent
-echo "   npm install ✓"
+echo "   npm install âœ“"
 
-# ── 5. Start/restart backend with PM2 ─────────────────────────────────────────
+# â”€â”€ 5. Start/restart backend with PM2 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo ""
 echo "5. Starting backend with PM2..."
 pm2 delete artic-hms-backend 2>/dev/null || true
@@ -73,9 +73,9 @@ pm2 start src/index.js \
   --name artic-hms-backend \
   --node-args="--env-file=/home/artic/artic-hms/backend/.env"
 pm2 save
-echo "   PM2 backend started ✓"
+echo "   PM2 backend started âœ“"
 
-# ── 6. Build and start frontend ────────────────────────────────────────────────
+# â”€â”€ 6. Build and start frontend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo ""
 echo "6. Building frontend..."
 cd /home/artic/artic-hms/frontend
@@ -84,15 +84,15 @@ NEXT_PUBLIC_API_URL=http://172.209.217.176:4001 npm run build
 pm2 delete artic-hms-frontend 2>/dev/null || true
 pm2 start npm --name artic-hms-frontend -- start -- -p 3001
 pm2 save
-echo "   Frontend started ✓"
+echo "   Frontend started âœ“"
 
-# ── 7. UFW firewall ────────────────────────────────────────────────────────────
+# â”€â”€ 7. UFW firewall â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo ""
 echo "7. Checking firewall..."
-sudo ufw allow 4001/tcp 2>/dev/null && echo "   ufw 4001 added ✓" || echo "   ufw 4001 already open ✓"
-sudo ufw allow 3001/tcp 2>/dev/null && echo "   ufw 3001 added ✓" || echo "   ufw 3001 already open ✓"
+sudo ufw allow 4001/tcp 2>/dev/null && echo "   ufw 4001 added âœ“" || echo "   ufw 4001 already open âœ“"
+sudo ufw allow 3001/tcp 2>/dev/null && echo "   ufw 3001 added âœ“" || echo "   ufw 3001 already open âœ“"
 
-# ── 8. Wait and verify ─────────────────────────────────────────────────────────
+# â”€â”€ 8. Wait and verify â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo ""
 echo "8. Waiting 8s for startup..."
 sleep 8
@@ -101,19 +101,19 @@ echo ""
 echo "=== Verification ==="
 echo ""
 
-# VMS — must still work
+# VMS â€” must still work
 VMS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 http://localhost:4000/health 2>/dev/null || echo "ERR")
-echo "VMS backend  (4000): $VMS_STATUS  ← must be 200, must NOT be affected"
+echo "VMS backend  (4000): $VMS_STATUS  â† must be 200, must NOT be affected"
 
 # HMS
 HMS_HEALTH=$(curl -s --connect-timeout 5 http://localhost:4001/health 2>/dev/null)
 if echo "$HMS_HEALTH" | grep -q '"version":"2.0.0"'; then
-  echo "HMS backend  (4001): 200 — version 2.0.0 ✓ FULL HMS ACTIVE"
+  echo "HMS backend  (4001): 200 â€” version 2.0.0 âœ“ FULL HMS ACTIVE"
   echo "HMS phase: $(echo $HMS_HEALTH | python3 -c 'import sys,json; print(json.load(sys.stdin).get("phase","?")[:60])' 2>/dev/null)"
 elif echo "$HMS_HEALTH" | grep -q '"status":"ok"'; then
-  echo "HMS backend  (4001): 200 — $(echo $HMS_HEALTH | python3 -c 'import sys,json; d=json.load(sys.stdin); print("v"+d.get("version","?")+" db="+d.get("database","?"))' 2>/dev/null)"
+  echo "HMS backend  (4001): 200 â€” $(echo $HMS_HEALTH | python3 -c 'import sys,json; d=json.load(sys.stdin); print("v"+d.get("version","?")+" db="+d.get("database","?"))' 2>/dev/null)"
 else
-  echo "HMS backend  (4001): FAILED — $HMS_HEALTH"
+  echo "HMS backend  (4001): FAILED â€” $HMS_HEALTH"
 fi
 
 HMS_FRONT=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://localhost:3001 2>/dev/null || echo "ERR")
@@ -132,8 +132,8 @@ TOKEN=$(curl -s -X POST http://localhost:4001/api/auth/login \
 
 for EP in /api/appointments /api/laboratory /api/pharmacy/prescriptions /api/billing/invoices /api/insurance /api/inventory /api/radiology /api/notifications /api/reports/kpis /api/medical-records/summary/p-001; do
   STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" --connect-timeout 5 http://localhost:4001$EP 2>/dev/null)
-  MARK="✓"
-  [ "$STATUS" != "200" ] && MARK="✗"
+  MARK="âœ“"
+  [ "$STATUS" != "200" ] && MARK="âœ—"
   echo "  $MARK $STATUS  $EP"
 done
 
