@@ -29,7 +29,7 @@ export async function getLiveKPIs(hospitalId) {
     SELECT COUNT(*) as total,
            SUM(CASE WHEN status IN ('approved','paid') THEN 1 ELSE 0 END) as approved
     FROM insurance_claims
-    WHERE hospital_id=? AND created_at >= CURRENT_DATE - INTERVAL '30 days'
+    WHERE hospital_id=? AND created_at::timestamp >= CURRENT_TIMESTAMP - INTERVAL '30 days'
   `).get(hid);
   const claimRate = claimsRow?.total > 0
     ? Math.round((claimsRow.approved / claimsRow.total) * 100)
@@ -49,7 +49,7 @@ export async function getRevenueByDepartment(hospitalId, days = 30) {
     SELECT ii.category as department, SUM(ii.total) as revenue
     FROM invoice_items ii
     JOIN invoices i ON i.id = ii.invoice_id
-    WHERE i.hospital_id=? AND i.created_at >= CURRENT_DATE - INTERVAL '${parseInt(days)} days'
+    WHERE i.hospital_id=? AND i.created_at::timestamp >= CURRENT_TIMESTAMP - INTERVAL '${parseInt(days)} days'
     GROUP BY ii.category ORDER BY revenue DESC
   `).all(hospitalId || H);
 }
@@ -59,7 +59,7 @@ export async function getWeeklyRevenue(hospitalId) {
   return db.prepare(`
     SELECT created_at::date as day, SUM(paid) as revenue
     FROM invoices
-    WHERE hospital_id=? AND created_at >= CURRENT_DATE - INTERVAL '7 days'
+    WHERE hospital_id=? AND created_at::timestamp >= CURRENT_TIMESTAMP - INTERVAL '7 days'
     GROUP BY created_at::date ORDER BY day ASC
   `).all(hospitalId || H);
 }
@@ -70,10 +70,10 @@ export async function getMOHSummary(hospitalId, month) {
 
   const [totalPatients, newPatients, totalAppointments, labTests, totalRevenue] = await Promise.all([
     db.prepare(`SELECT COUNT(DISTINCT patient_id) as n FROM appointments WHERE hospital_id=? AND TO_CHAR(appointment_date::date,'YYYY-MM')=? AND status='completed'`).get(hid, m),
-    db.prepare(`SELECT COUNT(*) as n FROM patients WHERE hospital_id=? AND TO_CHAR(created_at,'YYYY-MM')=?`).get(hid, m),
+    db.prepare(`SELECT COUNT(*) as n FROM patients WHERE hospital_id=? AND TO_CHAR(created_at::timestamp,'YYYY-MM')=?`).get(hid, m),
     db.prepare(`SELECT COUNT(*) as n FROM appointments WHERE hospital_id=? AND TO_CHAR(appointment_date::date,'YYYY-MM')=?`).get(hid, m),
-    db.prepare(`SELECT COUNT(*) as n FROM lab_requests WHERE hospital_id=? AND TO_CHAR(ordered_at,'YYYY-MM')=?`).get(hid, m),
-    db.prepare(`SELECT COALESCE(SUM(paid),0) as total FROM invoices WHERE hospital_id=? AND TO_CHAR(created_at,'YYYY-MM')=?`).get(hid, m),
+    db.prepare(`SELECT COUNT(*) as n FROM lab_requests WHERE hospital_id=? AND TO_CHAR(ordered_at::timestamp,'YYYY-MM')=?`).get(hid, m),
+    db.prepare(`SELECT COALESCE(SUM(paid),0) as total FROM invoices WHERE hospital_id=? AND TO_CHAR(created_at::timestamp,'YYYY-MM')=?`).get(hid, m),
   ]);
 
   return {
