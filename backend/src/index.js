@@ -11,6 +11,7 @@ import { seed } from "./database/seed.js";
 import { closeDb } from "./database/connection.js";
 import { config } from "./config/index.js";
 import { initSocket } from "./modules/realtime/socket.js";
+import { seedFeatureFlags } from "./modules/super-admin/super-admin.service.js";
 
 async function bootstrap() {
   // ── 1. Run database migrations (idempotent) ──────────────────────────────
@@ -18,8 +19,10 @@ async function bootstrap() {
 
   // ── 2. Seed demo data on first run ────────────────────────────────────────
   try { await seed(); } catch (e) {
-    // Seed errors are non-fatal (data may already exist)
     if (!e.message?.includes("UNIQUE")) console.warn("Seed warning:", e.message);
+  }
+  try { await seedFeatureFlags(); } catch (e) {
+    console.warn("Feature flag seed warning:", e.message);
   }
 
   // ── 3. Create HTTP server + Socket.IO ────────────────────────────────────

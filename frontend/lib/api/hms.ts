@@ -197,3 +197,20 @@ export const deathsApi = {
   register:   (data: unknown)                  => post("/api/registry/deaths", data),
   stats:      (month?: string)                 => get(`/api/registry/deaths/stats${month ? `?month=${month}` : ""}`),
 };
+
+// ─── Super Admin API ──────────────────────────────────────────────────────────
+export const superAdminApi = {
+  stats:             ()                                   => get("/api/super-admin/stats"),
+  listFeatures:      (params?: Record<string,string>)    => get(`/api/super-admin/features?${new URLSearchParams(params)}`),
+  updateFeature:     (id: string, data: unknown)         => patch(`/api/super-admin/features/${id}`, data),
+  listHospitals:     (params?: Record<string,string>)    => get(`/api/super-admin/hospitals?${new URLSearchParams(params)}`),
+  createHospital:    (data: unknown)                     => post("/api/super-admin/hospitals", data),
+  updateSubscription:(id: string, tier: string)          => patch(`/api/super-admin/hospitals/${id}/subscription`, { tier }),
+  getHospitalFeatures:(id: string)                       => get(`/api/super-admin/hospitals/${id}/features`),
+  setFeatureAccess:  (hospitalId: string, data: unknown) => post(`/api/super-admin/hospitals/${hospitalId}/features`, data),
+  setTierFeatures:   (hospitalId: string, tier: string)  => post(`/api/super-admin/hospitals/${hospitalId}/tier`, { tier }),
+  listRequests:      (params?: Record<string,string>)    => get(`/api/super-admin/requests?${new URLSearchParams(params)}`),
+  resolveRequest:    (id: string, decision: string, adminNotes: string) => patch(`/api/super-admin/requests/${id}`, { decision, adminNotes }),
+  listInvoices:      (params?: Record<string,string>)    => get(`/api/super-admin/invoices?${new URLSearchParams(params)}`),
+  createInvoice:     (data: unknown)                     => post("/api/super-admin/invoices", data),
+};

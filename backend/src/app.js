@@ -36,6 +36,7 @@ import nursingRoutes        from "./modules/nursing/nursing.routes.js";
 import vaccinationRoutes    from "./modules/registries/vaccinations/vaccinations.routes.js";
 import birthsRoutes         from "./modules/registries/births/births.routes.js";
 import deathsRoutes         from "./modules/registries/deaths/deaths.routes.js";
+import superAdminRoutes     from "./modules/super-admin/super-admin.routes.js";
 
 // ── Legacy shim data (in-memory, for backward-compat endpoints) ───────────────
 import { modules, roles, users as legacyUsers, auditLogs } from "./data.js";
@@ -101,6 +102,7 @@ app.use("/api/nursing",         nursingRoutes);
 app.use("/api/registry/vaccinations", vaccinationRoutes);
 app.use("/api/registry/births",       birthsRoutes);
 app.use("/api/registry/deaths",       deathsRoutes);
+app.use("/api/super-admin",           superAdminRoutes);
 
 // ── Legacy shim routes (keep existing frontend working) ───────────────────────
 function legacyUser(req) {

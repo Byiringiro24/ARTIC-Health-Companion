@@ -1151,4 +1151,98 @@ CREATE TABLE IF NOT EXISTS fp_visits (
   notes           TEXT,
   created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SUPER ADMIN — FEATURE FLAGS, SUBSCRIPTIONS, ACCESS CONTROL
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS feature_flags (
+  id                  TEXT PRIMARY KEY,
+  name                TEXT UNIQUE NOT NULL,
+  label               TEXT NOT NULL,
+  description         TEXT,
+  category            TEXT NOT NULL DEFAULT 'core',
+  icon                TEXT DEFAULT '⚙️',
+  default_status      TEXT NOT NULL DEFAULT 'active',
+  tier_required       TEXT NOT NULL DEFAULT 'basic',
+  requires_approval   INTEGER NOT NULL DEFAULT 0,
+  access_message      TEXT,
+  contact_email       TEXT,
+  contact_phone       TEXT,
+  usage_limit_default INTEGER,
+  is_paid_addon       INTEGER NOT NULL DEFAULT 0,
+  addon_price         REAL,
+  sort_order          INTEGER NOT NULL DEFAULT 0,
+  is_active           INTEGER NOT NULL DEFAULT 1,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  tier            TEXT NOT NULL DEFAULT 'trial',
+  status          TEXT NOT NULL DEFAULT 'active',
+  price_per_month REAL,
+  currency        TEXT NOT NULL DEFAULT 'USD',
+  started_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at      TEXT,
+  trial_ends_at   TEXT,
+  billing_email   TEXT,
+  notes           TEXT,
+  created_by      TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_sub_hospital ON subscriptions(hospital_id);
+
+CREATE TABLE IF NOT EXISTS hospital_feature_access (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  feature_id      TEXT NOT NULL REFERENCES feature_flags(id) ON DELETE CASCADE,
+  access_status   TEXT NOT NULL DEFAULT 'locked',
+  approved_by     TEXT REFERENCES users(id),
+  approved_at     TEXT,
+  expires_at      TEXT,
+  usage_count     INTEGER NOT NULL DEFAULT 0,
+  usage_limit     INTEGER,
+  notes           TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(hospital_id, feature_id)
+);
+CREATE INDEX IF NOT EXISTS idx_hfa_hospital ON hospital_feature_access(hospital_id);
+
+CREATE TABLE IF NOT EXISTS feature_access_requests (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  feature_id      TEXT NOT NULL REFERENCES feature_flags(id) ON DELETE CASCADE,
+  requested_by    TEXT NOT NULL REFERENCES users(id),
+  status          TEXT NOT NULL DEFAULT 'pending',
+  reason          TEXT,
+  admin_notes     TEXT,
+  approved_by     TEXT REFERENCES users(id),
+  approved_at     TEXT,
+  expires_at      TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_far_hospital ON feature_access_requests(hospital_id);
+CREATE INDEX IF NOT EXISTS idx_far_status   ON feature_access_requests(status);
+
+CREATE TABLE IF NOT EXISTS subscription_invoices (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  invoice_ref     TEXT UNIQUE NOT NULL,
+  amount          REAL NOT NULL,
+  currency        TEXT NOT NULL DEFAULT 'USD',
+  status          TEXT NOT NULL DEFAULT 'pending',
+  period_start    TEXT,
+  period_end      TEXT,
+  paid_at         TEXT,
+  notes           TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_si_hospital ON subscription_invoices(hospital_id);
 `;

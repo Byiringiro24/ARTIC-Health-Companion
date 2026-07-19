@@ -1,0 +1,1524 @@
+﻿# 🏗️ ARTIC HEALTH COMPANION — COMPLETE PROJECT STRUCTURE
+
+## *Enterprise Hospital Management System — Full-Stack Architecture*
+
+---
+
+# 📋 EXECUTIVE SUMMARY
+
+This document provides the **complete project structure** for the ARTIC Health Companion Hospital Management System. It covers:
+
+1. **Physical folder structure** (frontend, backend, database, deployment)
+2. **Module architecture** (how features are organized)
+3. **Component hierarchy** (how UI is structured)
+4. **API structure** (endpoints and services)
+5. **Database structure** (tables and relationships)
+
+This structure is designed to be:
+- **Scalable** — From 1 hospital to 1,000+
+- **Maintainable** — Clear separation of concerns
+- **Extensible** — Easy to add new features
+- **Secure** — Role-based access at every level
+
+---
+
+# 📁 PART 1: PHYSICAL PROJECT STRUCTURE
+
+## Complete Monorepo Layout
+
+```
+artic-health-companion/
+│
+├── apps/
+│   ├── web/                              # FRONTEND APPLICATION
+│   │   ├── public/
+│   │   │   ├── images/
+│   │   │   ├── icons/
+│   │   │   ├── fonts/
+│   │   │   └── robots.txt
+│   │   │
+│   │   ├── src/
+│   │   │   ├── app/
+│   │   │   │   ├── (auth)/
+│   │   │   │   │   ├── login/
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── register/
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── forgot-password/
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── reset-password/
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── verify-2fa/
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   └── layout.tsx
+│   │   │   │   │
+│   │   │   │   ├── (dashboard)/
+│   │   │   │   │   ├── layout.tsx
+│   │   │   │   │   ├── page.tsx                         # Redirect to role dashboard
+│   │   │   │   │   │
+│   │   │   │   │   ├── admin/                           # Super Admin
+│   │   │   │   │   │   ├── page.tsx                     # Admin Dashboard
+│   │   │   │   │   │   ├── hospitals/
+│   │   │   │   │   │   │   ├── page.tsx                 # List all hospitals
+│   │   │   │   │   │   │   ├── new/
+│   │   │   │   │   │   │   │   └── page.tsx             # Create hospital
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       ├── page.tsx             # Hospital details
+│   │   │   │   │   │   │       └── edit/
+│   │   │   │   │   │   │           └── page.tsx         # Edit hospital
+│   │   │   │   │   │   ├── users/
+│   │   │   │   │   │   │   ├── page.tsx                 # List all users
+│   │   │   │   │   │   │   ├── new/
+│   │   │   │   │   │   │   │   └── page.tsx             # Create user
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       ├── page.tsx             # User details
+│   │   │   │   │   │   │       └── edit/
+│   │   │   │   │   │   │           └── page.tsx         # Edit user
+│   │   │   │   │   │   ├── tenants/
+│   │   │   │   │   │   │   ├── page.tsx                 # List tenants
+│   │   │   │   │   │   │   └── new/
+│   │   │   │   │   │   │       └── page.tsx             # Create tenant
+│   │   │   │   │   │   ├── integrations/
+│   │   │   │   │   │   │   └── page.tsx                 # Integration settings
+│   │   │   │   │   │   ├── security/
+│   │   │   │   │   │   │   └── page.tsx                 # Security policies
+│   │   │   │   │   │   ├── backups/
+│   │   │   │   │   │   │   └── page.tsx                 # Backup management
+│   │   │   │   │   │   └── reports/
+│   │   │   │   │   │       └── page.tsx                 # System-wide reports
+│   │   │   │   │   │
+│   │   │   │   │   ├── manager/                         # Hospital Manager
+│   │   │   │   │   │   ├── page.tsx                     # Manager Dashboard
+│   │   │   │   │   │   ├── dashboard/
+│   │   │   │   │   │   │   └── page.tsx                 # Live KPI dashboard
+│   │   │   │   │   │   ├── staff/
+│   │   │   │   │   │   │   ├── page.tsx                 # List staff
+│   │   │   │   │   │   │   ├── new/
+│   │   │   │   │   │   │   │   └── page.tsx             # Create staff
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       ├── page.tsx             # Staff details
+│   │   │   │   │   │   │       └── edit/
+│   │   │   │   │   │   │           └── page.tsx         # Edit staff
+│   │   │   │   │   │   ├── departments/
+│   │   │   │   │   │   │   ├── page.tsx
+│   │   │   │   │   │   │   └── new/
+│   │   │   │   │   │   │       └── page.tsx
+│   │   │   │   │   │   ├── wards/
+│   │   │   │   │   │   │   ├── page.tsx                 # Ward management
+│   │   │   │   │   │   │   └── beds/
+│   │   │   │   │   │   │       └── page.tsx             # Bed map
+│   │   │   │   │   │   ├── finance/
+│   │   │   │   │   │   │   ├── overview/
+│   │   │   │   │   │   │   │   └── page.tsx             # Financial overview
+│   │   │   │   │   │   │   ├── revenue/
+│   │   │   │   │   │   │   │   └── page.tsx             # Revenue reports
+│   │   │   │   │   │   │   └── reconciliation/
+│   │   │   │   │   │   │       └── page.tsx             # Daily reconciliation
+│   │   │   │   │   │   ├── procurement/
+│   │   │   │   │   │   │   ├── requests/
+│   │   │   │   │   │   │   │   └── page.tsx             # Purchase requests
+│   │   │   │   │   │   │   └── orders/
+│   │   │   │   │   │   │       └── page.tsx             # Purchase orders
+│   │   │   │   │   │   ├── quality/
+│   │   │   │   │   │   │   ├── audits/
+│   │   │   │   │   │   │   │   └── page.tsx             # Clinical audits
+│   │   │   │   │   │   │   └── incidents/
+│   │   │   │   │   │   │       └── page.tsx             # Incident reports
+│   │   │   │   │   │   └── settings/
+│   │   │   │   │   │       ├── general/
+│   │   │   │   │   │       │   └── page.tsx             # Facility settings
+│   │   │   │   │   │       ├── fees/
+│   │   │   │   │   │       │   └── page.tsx             # Fee management
+│   │   │   │   │   │       └── notifications/
+│   │   │   │   │   │           └── page.tsx             # Notification settings
+│   │   │   │   │   │
+│   │   │   │   │   ├── doctor/                          # DOCTOR
+│   │   │   │   │   │   ├── page.tsx                     # Doctor Dashboard
+│   │   │   │   │   │   ├── queue/
+│   │   │   │   │   │   │   └── page.tsx                 # Consultation queue
+│   │   │   │   │   │   ├── patients/
+│   │   │   │   │   │   │   ├── page.tsx                 # My patients
+│   │   │   │   │   │   │   └── [patientId]/
+│   │   │   │   │   │   │       ├── page.tsx             # Patient overview
+│   │   │   │   │   │   │       ├── consultation/
+│   │   │   │   │   │   │       │   └── page.tsx         # Consultation view
+│   │   │   │   │   │   │       ├── prescribe/
+│   │   │   │   │   │   │       │   └── page.tsx         # Prescribe
+│   │   │   │   │   │   │       ├── lab-request/
+│   │   │   │   │   │   │       │   └── page.tsx         # Order lab
+│   │   │   │   │   │   │       ├── radiology-request/
+│   │   │   │   │   │   │       │   └── page.tsx         # Order imaging
+│   │   │   │   │   │   │       ├── referral/
+│   │   │   │   │   │   │       │   └── page.tsx         # Create referral
+│   │   │   │   │   │   │       ├── admission/
+│   │   │   │   │   │   │       │   └── page.tsx         # Admit patient
+│   │   │   │   │   │   │       └── discharge/
+│   │   │   │   │   │   │           └── page.tsx         # Discharge
+│   │   │   │   │   │   ├── lab-results/
+│   │   │   │   │   │   │   └── page.tsx                 # View lab results
+│   │   │   │   │   │   ├── radiology-results/
+│   │   │   │   │   │   │   └── page.tsx                 # View imaging
+│   │   │   │   │   │   ├── prescriptions/
+│   │   │   │   │   │   │   ├── page.tsx                 # My prescriptions
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       └── page.tsx             # Prescription details
+│   │   │   │   │   │   ├── telemedicine/
+│   │   │   │   │   │   │   ├── page.tsx                 # Telemedicine list
+│   │   │   │   │   │   │   └── call/
+│   │   │   │   │   │   │       └── [id]/
+│   │   │   │   │   │   │           └── page.tsx         # Video call
+│   │   │   │   │   │   ├── schedule/
+│   │   │   │   │   │   │   └── page.tsx                 # My schedule
+│   │   │   │   │   │   └── reports/
+│   │   │   │   │   │       ├── clinical/
+│   │   │   │   │   │       │   └── page.tsx             # Clinical reports
+│   │   │   │   │   │       └── patients/
+│   │   │   │   │   │           └── page.tsx             # Patient reports
+│   │   │   │   │   │
+│   │   │   │   │   ├── nurse/                           # NURSE
+│   │   │   │   │   │   ├── page.tsx                     # Nurse Dashboard
+│   │   │   │   │   │   ├── triage/
+│   │   │   │   │   │   │   └── page.tsx                 # Triage queue
+│   │   │   │   │   │   ├── patients/
+│   │   │   │   │   │   │   ├── page.tsx                 # Assigned patients
+│   │   │   │   │   │   │   └── [patientId]/
+│   │   │   │   │   │   │       ├── page.tsx             # Patient view
+│   │   │   │   │   │   │       ├── vitals/
+│   │   │   │   │   │   │       │   └── page.tsx         # Record vitals
+│   │   │   │   │   │   │       ├── medications/
+│   │   │   │   │   │   │       │   └── page.tsx         # Administer meds
+│   │   │   │   │   │   │       └── nursing-notes/
+│   │   │   │   │   │   │           └── page.tsx         # Nursing notes
+│   │   │   │   │   │   ├── ward/
+│   │   │   │   │   │   │   ├── page.tsx                 # Ward view
+│   │   │   │   │   │   │   └── beds/
+│   │   │   │   │   │   │       └── page.tsx             # Bed management
+│   │   │   │   │   │   ├── shift-handover/
+│   │   │   │   │   │   │   └── page.tsx                 # Handover notes
+│   │   │   │   │   │   └── blood-bank/
+│   │   │   │   │   │       └── page.tsx                 # Blood bank view
+│   │   │   │   │   │
+│   │   │   │   │   ├── pharmacist/                     # PHARMACIST
+│   │   │   │   │   │   ├── page.tsx                     # Pharmacist Dashboard
+│   │   │   │   │   │   ├── prescriptions/
+│   │   │   │   │   │   │   ├── page.tsx                 # All prescriptions
+│   │   │   │   │   │   │   ├── pending/
+│   │   │   │   │   │   │   │   └── page.tsx             # Pending queue
+│   │   │   │   │   │   │   └── dispense/
+│   │   │   │   │   │   │       └── [id]/
+│   │   │   │   │   │   │           └── page.tsx         # Dispense view
+│   │   │   │   │   │   ├── inventory/
+│   │   │   │   │   │   │   ├── page.tsx                 # Inventory view
+│   │   │   │   │   │   │   ├── add/
+│   │   │   │   │   │   │   │   └── page.tsx             # Add drug
+│   │   │   │   │   │   │   ├── receive/
+│   │   │   │   │   │   │   │   └── page.tsx             # Receive stock
+│   │   │   │   │   │   │   ├── transfer/
+│   │   │   │   │   │   │   │   └── page.tsx             # Transfer stock
+│   │   │   │   │   │   │   └── adjust/
+│   │   │   │   │   │   │       └── page.tsx             # Adjust stock
+│   │   │   │   │   │   ├── drugs/
+│   │   │   │   │   │   │   ├── page.tsx                 # Drug catalog
+│   │   │   │   │   │   │   └── new/
+│   │   │   │   │   │   │       └── page.tsx             # Add drug
+│   │   │   │   │   │   └── reports/
+│   │   │   │   │   │       ├── dispensing/
+│   │   │   │   │   │       │   └── page.tsx             # Dispensing report
+│   │   │   │   │   │       └── controlled/
+│   │   │   │   │   │           └── page.tsx             # Controlled substances
+│   │   │   │   │   │
+│   │   │   │   │   ├── laboratory/                     # LAB TECHNICIAN
+│   │   │   │   │   │   ├── page.tsx                     # Lab Dashboard
+│   │   │   │   │   │   ├── tests/
+│   │   │   │   │   │   │   ├── page.tsx                 # All tests
+│   │   │   │   │   │   │   ├── pending/
+│   │   │   │   │   │   │   │   └── page.tsx             # Pending queue
+│   │   │   │   │   │   │   ├── in-progress/
+│   │   │   │   │   │   │   │   └── page.tsx             # In progress
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       ├── page.tsx             # Test details
+│   │   │   │   │   │   │       ├── collect/
+│   │   │   │   │   │   │       │   └── page.tsx         # Collect specimen
+│   │   │   │   │   │   │       ├── process/
+│   │   │   │   │   │   │       │   └── page.tsx         # Process test
+│   │   │   │   │   │   │       └── enter-result/
+│   │   │   │   │   │   │           └── page.tsx         # Enter results
+│   │   │   │   │   │   ├── quality-control/
+│   │   │   │   │   │   │   ├── page.tsx                 # QC overview
+│   │   │   │   │   │   │   └── runs/
+│   │   │   │   │   │   │       └── page.tsx             # QC runs
+│   │   │   │   │   │   └── reports/
+│   │   │   │   │   │       ├── turnaround/
+│   │   │   │   │   │       │   └── page.tsx             # TAT report
+│   │   │   │   │   │       └── workload/
+│   │   │   │   │   │           └── page.tsx             # Workload report
+│   │   │   │   │   │
+│   │   │   │   │   ├── radiology/                      # RADIOLOGY
+│   │   │   │   │   │   ├── page.tsx                     # Radiology Dashboard
+│   │   │   │   │   │   ├── orders/
+│   │   │   │   │   │   │   ├── page.tsx                 # All orders
+│   │   │   │   │   │   │   ├── pending/
+│   │   │   │   │   │   │   │   └── page.tsx             # Pending queue
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       ├── page.tsx             # Order details
+│   │   │   │   │   │   │       ├── perform/
+│   │   │   │   │   │   │       │   └── page.tsx         # Perform imaging
+│   │   │   │   │   │   │       └── report/
+│   │   │   │   │   │   │           └── page.tsx         # Add report
+│   │   │   │   │   │   └── reports/
+│   │   │   │   │   │       └── page.tsx                 # Radiology reports
+│   │   │   │   │   │
+│   │   │   │   │   ├── accountant/                     # ACCOUNTANT
+│   │   │   │   │   │   ├── page.tsx                     # Accountant Dashboard
+│   │   │   │   │   │   ├── billing/
+│   │   │   │   │   │   │   ├── page.tsx                 # All invoices
+│   │   │   │   │   │   │   ├── new/
+│   │   │   │   │   │   │   │   └── page.tsx             # Create invoice
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       ├── page.tsx             # Invoice details
+│   │   │   │   │   │   │       ├── edit/
+│   │   │   │   │   │   │       │   └── page.tsx         # Edit invoice
+│   │   │   │   │   │   │       └── cancel/
+│   │   │   │   │   │   │           └── page.tsx         # Cancel invoice
+│   │   │   │   │   │   ├── payments/
+│   │   │   │   │   │   │   ├── page.tsx                 # All payments
+│   │   │   │   │   │   │   └── record/
+│   │   │   │   │   │   │       └── page.tsx             # Record payment
+│   │   │   │   │   │   ├── insurance/
+│   │   │   │   │   │   │   ├── claims/
+│   │   │   │   │   │   │   │   └── page.tsx             # Insurance claims
+│   │   │   │   │   │   │   └── submissions/
+│   │   │   │   │   │   │       └── page.tsx             # Submit claims
+│   │   │   │   │   │   └── reports/
+│   │   │   │   │   │       ├── revenue/
+│   │   │   │   │   │       │   └── page.tsx             # Revenue reports
+│   │   │   │   │   │       ├── outstanding/
+│   │   │   │   │   │       │   └── page.tsx             # Outstanding bills
+│   │   │   │   │   │       └── reconciliation/
+│   │   │   │   │   │           └── page.tsx             # Reconciliation
+│   │   │   │   │   │
+│   │   │   │   │   ├── cashier/                        # CASHIER
+│   │   │   │   │   │   ├── page.tsx                     # Cashier Dashboard
+│   │   │   │   │   │   ├── payments/
+│   │   │   │   │   │   │   ├── page.tsx                 # Payments queue
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       └── page.tsx             # Process payment
+│   │   │   │   │   │   ├── receipts/
+│   │   │   │   │   │   │   └── page.tsx                 # Receipt history
+│   │   │   │   │   │   └── shift/
+│   │   │   │   │   │       └── page.tsx                 # Close shift
+│   │   │   │   │   │
+│   │   │   │   │   ├── reception/                      # RECEPTIONIST
+│   │   │   │   │   │   ├── page.tsx                     # Reception Dashboard
+│   │   │   │   │   │   ├── patients/
+│   │   │   │   │   │   │   ├── page.tsx                 # Patient search
+│   │   │   │   │   │   │   ├── register/
+│   │   │   │   │   │   │   │   └── page.tsx             # Register patient
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       ├── page.tsx             # Patient details
+│   │   │   │   │   │   │       └── edit/
+│   │   │   │   │   │   │           └── page.tsx         # Edit patient
+│   │   │   │   │   │   ├── appointments/
+│   │   │   │   │   │   │   ├── page.tsx                 # All appointments
+│   │   │   │   │   │   │   ├── book/
+│   │   │   │   │   │   │   │   └── page.tsx             # Book appointment
+│   │   │   │   │   │   │   └── reschedule/
+│   │   │   │   │   │   │       └── page.tsx             # Reschedule
+│   │   │   │   │   │   ├── queue/
+│   │   │   │   │   │   │   └── page.tsx                 # Live queue
+│   │   │   │   │   │   └── check-in/
+│   │   │   │   │   │       └── page.tsx                 # Check-in patient
+│   │   │   │   │   │
+│   │   │   │   │   ├── store/                          # STORE MANAGER
+│   │   │   │   │   │   ├── page.tsx                     # Store Dashboard
+│   │   │   │   │   │   ├── inventory/
+│   │   │   │   │   │   │   ├── page.tsx                 # Inventory view
+│   │   │   │   │   │   │   ├── add/
+│   │   │   │   │   │   │   │   └── page.tsx             # Add item
+│   │   │   │   │   │   │   ├── receive/
+│   │   │   │   │   │   │   │   └── page.tsx             # Receive stock
+│   │   │   │   │   │   │   └── adjust/
+│   │   │   │   │   │   │       └── page.tsx             # Adjust stock
+│   │   │   │   │   │   ├── suppliers/
+│   │   │   │   │   │   │   ├── page.tsx                 # Suppliers list
+│   │   │   │   │   │   │   └── new/
+│   │   │   │   │   │   │       └── page.tsx             # Add supplier
+│   │   │   │   │   │   ├── procurement/
+│   │   │   │   │   │   │   ├── requests/
+│   │   │   │   │   │   │   │   └── page.tsx             # Purchase requests
+│   │   │   │   │   │   │   └── orders/
+│   │   │   │   │   │   │       └── page.tsx             # Purchase orders
+│   │   │   │   │   │   └── reports/
+│   │   │   │   │   │       ├── stock/
+│   │   │   │   │   │       │   └── page.tsx             # Stock report
+│   │   │   │   │   │       └── consumption/
+│   │   │   │   │   │           └── page.tsx             # Consumption report
+│   │   │   │   │   │
+│   │   │   │   │   ├── hr/                             # HR MANAGER
+│   │   │   │   │   │   ├── page.tsx                     # HR Dashboard
+│   │   │   │   │   │   ├── employees/
+│   │   │   │   │   │   │   ├── page.tsx                 # All employees
+│   │   │   │   │   │   │   ├── new/
+│   │   │   │   │   │   │   │   └── page.tsx             # Add employee
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       ├── page.tsx             # Employee details
+│   │   │   │   │   │   │       └── edit/
+│   │   │   │   │   │   │           └── page.tsx         # Edit employee
+│   │   │   │   │   │   ├── attendance/
+│   │   │   │   │   │   │   └── page.tsx                 # Attendance tracking
+│   │   │   │   │   │   ├── leave/
+│   │   │   │   │   │   │   ├── requests/
+│   │   │   │   │   │   │   │   └── page.tsx             # Leave requests
+│   │   │   │   │   │   │   └── calendar/
+│   │   │   │   │   │   │       └── page.tsx             # Leave calendar
+│   │   │   │   │   │   ├── payroll/
+│   │   │   │   │   │   │   ├── page.tsx                 # Payroll view
+│   │   │   │   │   │   │   └── process/
+│   │   │   │   │   │   │       └── page.tsx             # Process payroll
+│   │   │   │   │   │   └── reports/
+│   │   │   │   │   │       └── page.tsx                 # HR reports
+│   │   │   │   │   │
+│   │   │   │   │   ├── insurance/                      # INSURANCE OFFICER
+│   │   │   │   │   │   ├── page.tsx                     # Insurance Dashboard
+│   │   │   │   │   │   ├── verification/
+│   │   │   │   │   │   │   └── page.tsx                 # Verify insurance
+│   │   │   │   │   │   ├── claims/
+│   │   │   │   │   │   │   ├── page.tsx                 # All claims
+│   │   │   │   │   │   │   ├── submit/
+│   │   │   │   │   │   │   │   └── page.tsx             # Submit claim
+│   │   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │   │       └── page.tsx             # Claim details
+│   │   │   │   │   │   └── reports/
+│   │   │   │   │   │       ├── submissions/
+│   │   │   │   │   │       │   └── page.tsx             # Submission report
+│   │   │   │   │   │       └── rejections/
+│   │   │   │   │   │           └── page.tsx             # Rejection analysis
+│   │   │   │   │   │
+│   │   │   │   │   ├── data/                           # DATA OFFICER
+│   │   │   │   │   │   ├── page.tsx                     # Data Dashboard
+│   │   │   │   │   │   ├── hmis/
+│   │   │   │   │   │   │   ├── page.tsx                 # HMIS reports
+│   │   │   │   │   │   │   └── submit/
+│   │   │   │   │   │   │       └── page.tsx             # Submit HMIS
+│   │   │   │   │   │   ├── pbf/
+│   │   │   │   │   │   │   ├── page.tsx                 # PBF indicators
+│   │   │   │   │   │   │   └── submit/
+│   │   │   │   │   │   │       └── page.tsx             # Submit PBF
+│   │   │   │   │   │   ├── surveillance/
+│   │   │   │   │   │   │   ├── page.tsx                 # Surveillance data
+│   │   │   │   │   │   │   └── reports/
+│   │   │   │   │   │   │       └── page.tsx             # Epidemic reports
+│   │   │   │   │   │   └── analytics/
+│   │   │   │   │   │       ├── dashboards/
+│   │   │   │   │   │       │   └── page.tsx             # Analytics dashboards
+│   │   │   │   │   │       └── exports/
+│   │   │   │   │   │           └── page.tsx             # Data exports
+│   │   │   │   │   │
+│   │   │   │   │   ├── quality/                        # QUALITY OFFICER
+│   │   │   │   │   │   ├── page.tsx                     # Quality Dashboard
+│   │   │   │   │   │   ├── audits/
+│   │   │   │   │   │   │   ├── page.tsx                 # All audits
+│   │   │   │   │   │   │   └── new/
+│   │   │   │   │   │   │       └── page.tsx             # Create audit
+│   │   │   │   │   │   ├── incidents/
+│   │   │   │   │   │   │   ├── page.tsx                 # All incidents
+│   │   │   │   │   │   │   └── new/
+│   │   │   │   │   │   │       └── page.tsx             # Report incident
+│   │   │   │   │   │   ├── accreditation/
+│   │   │   │   │   │   │   └── page.tsx                 # RAAQH readiness
+│   │   │   │   │   │   └── infection-control/
+│   │   │   │   │   │       └── page.tsx                 # Infection control
+│   │   │   │   │   │
+│   │   │   │   │   ├── ambulance/                      # AMBULANCE DRIVER
+│   │   │   │   │   │   ├── page.tsx                     # Ambulance Dashboard
+│   │   │   │   │   │   ├── dispatch/
+│   │   │   │   │   │   │   └── page.tsx                 # Dispatch assignments
+│   │   │   │   │   │   ├── vehicle/
+│   │   │   │   │   │   │   └── page.tsx                 # Vehicle status
+│   │   │   │   │   │   └── handover/
+│   │   │   │   │   │       └── page.tsx                 # Incident handover
+│   │   │   │   │   │
+│   │   │   │   │   └── patient-portal/                 # PATIENT
+│   │   │   │   │       ├── page.tsx                     # Patient Dashboard
+│   │   │   │   │       ├── appointments/
+│   │   │   │   │       │   ├── page.tsx                 # My appointments
+│   │   │   │   │       │   ├── book/
+│   │   │   │   │       │   │   └── page.tsx             # Book appointment
+│   │   │   │   │       │   └── [id]/
+│   │   │   │   │       │       ├── reschedule/
+│   │   │   │   │       │       │   └── page.tsx         # Reschedule
+│   │   │   │   │       │       └── cancel/
+│   │   │   │   │       │           └── page.tsx         # Cancel
+│   │   │   │   │       ├── medical-records/
+│   │   │   │   │       │   ├── page.tsx                 # My records
+│   │   │   │   │       │   └── [id]/
+│   │   │   │   │       │       └── page.tsx             # Record details
+│   │   │   │   │       ├── lab-results/
+│   │   │   │   │       │   └── page.tsx                 # My lab results
+│   │   │   │   │       ├── prescriptions/
+│   │   │   │   │       │   ├── page.tsx                 # My prescriptions
+│   │   │   │   │       │   └── refill/
+│   │   │   │   │       │       └── page.tsx             # Request refill
+│   │   │   │   │       ├── billing/
+│   │   │   │   │       │   ├── page.tsx                 # My bills
+│   │   │   │   │       │   └── pay/
+│   │   │   │   │       │       └── [id]/
+│   │   │   │   │       │           └── page.tsx         # Pay bill
+│   │   │   │   │       ├── telemedicine/
+│   │   │   │   │       │   ├── page.tsx                 # Telemedicine
+│   │   │   │   │       │   └── call/
+│   │   │   │   │       │       └── [id]/
+│   │   │   │   │       │           └── page.tsx         # Video call
+│   │   │   │   │       ├── messages/
+│   │   │   │   │       │   └── page.tsx                 # Secure messages
+│   │   │   │   │       └── profile/
+│   │   │   │   │           ├── page.tsx                 # My profile
+│   │   │   │   │           └── edit/
+│   │   │   │   │               └── page.tsx             # Edit profile
+│   │   │   │   │
+│   │   │   │   └── (public)/
+│   │   │   │       ├── page.tsx                         # Landing Page
+│   │   │   │       ├── about/
+│   │   │   │       │   └── page.tsx
+│   │   │   │       ├── services/
+│   │   │   │       │   └── page.tsx
+│   │   │   │       ├── doctors/
+│   │   │   │       │   └── page.tsx
+│   │   │   │       ├── departments/
+│   │   │   │       │   └── page.tsx
+│   │   │   │       ├── contact/
+│   │   │   │       │   └── page.tsx
+│   │   │   │       ├── blog/
+│   │   │   │       │   ├── page.tsx
+│   │   │   │       │   └── [slug]/
+│   │   │   │       │       └── page.tsx
+│   │   │   │       ├── appointments/
+│   │   │   │       │   └── book/
+│   │   │   │       │       └── page.tsx
+│   │   │   │       ├── ai-assistant/
+│   │   │   │       │   └── page.tsx                     # AI Health Assistant
+│   │   │   │       └── pricing/
+│   │   │   │           └── page.tsx                     # AI Pricing
+│   │   │   │
+│   │   │   ├── components/
+│   │   │   │   ├── ui/                                 # shadcn/ui components
+│   │   │   │   │   ├── button.tsx
+│   │   │   │   │   ├── card.tsx
+│   │   │   │   │   ├── dialog.tsx
+│   │   │   │   │   ├── dropdown-menu.tsx
+│   │   │   │   │   ├── form.tsx
+│   │   │   │   │   ├── input.tsx
+│   │   │   │   │   ├── label.tsx
+│   │   │   │   │   ├── select.tsx
+│   │   │   │   │   ├── table.tsx
+│   │   │   │   │   ├── tabs.tsx
+│   │   │   │   │   ├── toast.tsx
+│   │   │   │   │   ├── badge.tsx
+│   │   │   │   │   ├── avatar.tsx
+│   │   │   │   │   ├── alert.tsx
+│   │   │   │   │   ├── progress.tsx
+│   │   │   │   │   ├── skeleton.tsx
+│   │   │   │   │   └── ...
+│   │   │   │   │
+│   │   │   │   ├── layout/
+│   │   │   │   │   ├── Sidebar.tsx
+│   │   │   │   │   ├── Navbar.tsx
+│   │   │   │   │   ├── Footer.tsx
+│   │   │   │   │   ├── Breadcrumbs.tsx
+│   │   │   │   │   └── UserMenu.tsx
+│   │   │   │   │
+│   │   │   │   ├── shared/
+│   │   │   │   │   ├── DataTable.tsx
+│   │   │   │   │   ├── SearchBar.tsx
+│   │   │   │   │   ├── Pagination.tsx
+│   │   │   │   │   ├── Modal.tsx
+│   │   │   │   │   ├── LoadingSpinner.tsx
+│   │   │   │   │   ├── EmptyState.tsx
+│   │   │   │   │   ├── ErrorBoundary.tsx
+│   │   │   │   │   ├── ConfirmDialog.tsx
+│   │   │   │   │   └── StatCard.tsx
+│   │   │   │   │
+│   │   │   │   ├── forms/
+│   │   │   │   │   ├── PatientForm.tsx
+│   │   │   │   │   ├── AppointmentForm.tsx
+│   │   │   │   │   ├── PrescriptionForm.tsx
+│   │   │   │   │   ├── LabRequestForm.tsx
+│   │   │   │   │   ├── RadiologyRequestForm.tsx
+│   │   │   │   │   ├── BillingForm.tsx
+│   │   │   │   │   ├── UserForm.tsx
+│   │   │   │   │   ├── StaffForm.tsx
+│   │   │   │   │   └── ReferralForm.tsx
+│   │   │   │   │
+│   │   │   │   ├── charts/
+│   │   │   │   │   ├── RevenueChart.tsx
+│   │   │   │   │   ├── PatientChart.tsx
+│   │   │   │   │   ├── OccupancyChart.tsx
+│   │   │   │   │   ├── DashboardStats.tsx
+│   │   │   │   │   ├── DiseaseChart.tsx
+│   │   │   │   │   └── TATChart.tsx
+│   │   │   │   │
+│   │   │   │   ├── dashboard/
+│   │   │   │   │   ├── SuperAdminDashboard.tsx
+│   │   │   │   │   ├── ManagerDashboard.tsx
+│   │   │   │   │   ├── DoctorDashboard.tsx
+│   │   │   │   │   ├── NurseDashboard.tsx
+│   │   │   │   │   ├── PharmacistDashboard.tsx
+│   │   │   │   │   ├── LabDashboard.tsx
+│   │   │   │   │   ├── AccountantDashboard.tsx
+│   │   │   │   │   ├── CashierDashboard.tsx
+│   │   │   │   │   ├── ReceptionDashboard.tsx
+│   │   │   │   │   └── PatientDashboard.tsx
+│   │   │   │   │
+│   │   │   │   ├── patient/
+│   │   │   │   │   ├── PatientCard.tsx
+│   │   │   │   │   ├── PatientSearch.tsx
+│   │   │   │   │   ├── MedicalHistory.tsx
+│   │   │   │   │   ├── VitalsDisplay.tsx
+│   │   │   │   │   ├── AllergyAlert.tsx
+│   │   │   │   │   ├── PatientProfile.tsx
+│   │   │   │   │   └── PatientQRCode.tsx
+│   │   │   │   │
+│   │   │   │   ├── consultation/
+│   │   │   │   │   ├── SOAPNotes.tsx
+│   │   │   │   │   ├── DiagnosisSelector.tsx
+│   │   │   │   │   ├── TreatmentPlan.tsx
+│   │   │   │   │   └── DischargeSummary.tsx
+│   │   │   │   │
+│   │   │   │   ├── pharmacy/
+│   │   │   │   │   ├── DrugSearch.tsx
+│   │   │   │   │   ├── PrescriptionDispenser.tsx
+│   │   │   │   │   ├── StockAlert.tsx
+│   │   │   │   │   └── ExpiryAlert.tsx
+│   │   │   │   │
+│   │   │   │   ├── lab/
+│   │   │   │   │   ├── TestSelector.tsx
+│   │   │   │   │   ├── ResultEntry.tsx
+│   │   │   │   │   ├── CriticalResultAlert.tsx
+│   │   │   │   │   └── QCChart.tsx
+│   │   │   │   │
+│   │   │   │   ├── chat/
+│   │   │   │   │   ├── ChatWindow.tsx
+│   │   │   │   │   ├── MessageList.tsx
+│   │   │   │   │   ├── MessageInput.tsx
+│   │   │   │   │   ├── GroupChat.tsx
+│   │   │   │   │   ├── EmergencyAlert.tsx
+│   │   │   │   │   └── ChatSidebar.tsx
+│   │   │   │   │
+│   │   │   │   └── ai/
+│   │   │   │       ├── AIAssistant.tsx
+│   │   │   │       ├── DiagnosisSuggestions.tsx
+│   │   │   │       ├── TreatmentSuggestions.tsx
+│   │   │   │       ├── DrugInteractionAlert.tsx
+│   │   │   │       └── PredictiveAnalytics.tsx
+│   │   │   │
+│   │   │   ├── hooks/
+│   │   │   │   ├── useAuth.ts
+│   │   │   │   ├── usePatients.ts
+│   │   │   │   ├── useAppointments.ts
+│   │   │   │   ├── usePrescriptions.ts
+│   │   │   │   ├── useLabTests.ts
+│   │   │   │   ├── useRadiology.ts
+│   │   │   │   ├── useBilling.ts
+│   │   │   │   ├── useInventory.ts
+│   │   │   │   ├── useNotifications.ts
+│   │   │   │   ├── useChat.ts
+│   │   │   │   ├── useAI.ts
+│   │   │   │   ├── usePermissions.ts
+│   │   │   │   └── useWebSocket.ts
+│   │   │   │
+│   │   │   ├── lib/
+│   │   │   │   ├── api/
+│   │   │   │   │   ├── client.ts                      # Axios instance
+│   │   │   │   │   ├── auth.ts
+│   │   │   │   │   ├── patients.ts
+│   │   │   │   │   ├── appointments.ts
+│   │   │   │   │   ├── prescriptions.ts
+│   │   │   │   │   ├── lab.ts
+│   │   │   │   │   ├── radiology.ts
+│   │   │   │   │   ├── billing.ts
+│   │   │   │   │   ├── inventory.ts
+│   │   │   │   │   ├── chat.ts
+│   │   │   │   │   ├── ai.ts
+│   │   │   │   │   └── reports.ts
+│   │   │   │   │
+│   │   │   │   ├── stores/
+│   │   │   │   │   ├── authStore.ts
+│   │   │   │   │   ├── patientStore.ts
+│   │   │   │   │   ├── appointmentStore.ts
+│   │   │   │   │   ├── notificationStore.ts
+│   │   │   │   │   ├── chatStore.ts
+│   │   │   │   │   └── uiStore.ts
+│   │   │   │   │
+│   │   │   │   ├── utils/
+│   │   │   │   │   ├── formatters.ts
+│   │   │   │   │   ├── validators.ts
+│   │   │   │   │   ├── constants.ts
+│   │   │   │   │   ├── helpers.ts
+│   │   │   │   │   ├── encryption.ts
+│   │   │   │   │   └── permissions.ts
+│   │   │   │   │
+│   │   │   │   ├── types/
+│   │   │   │   │   ├── patient.ts
+│   │   │   │   │   ├── user.ts
+│   │   │   │   │   ├── appointment.ts
+│   │   │   │   │   ├── prescription.ts
+│   │   │   │   │   ├── lab.ts
+│   │   │   │   │   ├── radiology.ts
+│   │   │   │   │   ├── billing.ts
+│   │   │   │   │   ├── inventory.ts
+│   │   │   │   │   ├── chat.ts
+│   │   │   │   │   ├── ai.ts
+│   │   │   │   │   └── common.ts
+│   │   │   │   │
+│   │   │   │   └── middleware/
+│   │   │   │       ├── auth.ts
+│   │   │   │       ├── roles.ts
+│   │   │   │       └── rate-limit.ts
+│   │   │   │
+│   │   │   └── styles/
+│   │   │       ├── globals.css
+│   │   │       └── tailwind.css
+│   │   │
+│   │   ├── .env.local
+│   │   ├── .env.production
+│   │   ├── next.config.js
+│   │   ├── tailwind.config.js
+│   │   ├── postcss.config.js
+│   │   ├── tsconfig.json
+│   │   └── package.json
+│   │
+│   └── mobile/                         # MOBILE APPLICATION (React Native)
+│       ├── src/
+│       │   ├── screens/
+│       │   ├── components/
+│       │   ├── navigation/
+│       │   ├── hooks/
+│       │   ├── services/
+│       │   └── utils/
+│       └── package.json
+│
+├── packages/
+│   ├── shared-types/                    # SHARED TYPES
+│   │   ├── src/
+│   │   │   ├── patient.ts
+│   │   │   ├── user.ts
+│   │   │   ├── appointment.ts
+│   │   │   ├── prescription.ts
+│   │   │   ├── billing.ts
+│   │   │   └── index.ts
+│   │   └── package.json
+│   │
+│   ├── ui/                              # SHARED UI COMPONENTS
+│   │   ├── src/
+│   │   │   └── components/
+│   │   └── package.json
+│   │
+│   └── config/                          # SHARED CONFIG
+│       ├── eslint/
+│       ├── typescript/
+│       └── tailwind/
+│
+├── backend/                              # BACKEND APPLICATION (NestJS)
+│   ├── src/
+│   │   ├── main.ts
+│   │   ├── app.module.ts
+│   │   ├── app.controller.ts
+│   │   ├── app.service.ts
+│   │   │
+│   │   ├── common/
+│   │   │   ├── decorators/
+│   │   │   │   ├── roles.decorator.ts
+│   │   │   │   ├── public.decorator.ts
+│   │   │   │   ├── user.decorator.ts
+│   │   │   │   └── audit.decorator.ts
+│   │   │   ├── guards/
+│   │   │   │   ├── auth.guard.ts
+│   │   │   │   ├── roles.guard.ts
+│   │   │   │   └── permissions.guard.ts
+│   │   │   ├── interceptors/
+│   │   │   │   ├── logging.interceptor.ts
+│   │   │   │   ├── transform.interceptor.ts
+│   │   │   │   └── audit.interceptor.ts
+│   │   │   ├── filters/
+│   │   │   │   ├── exception.filter.ts
+│   │   │   │   └── validation.filter.ts
+│   │   │   ├── middleware/
+│   │   │   │   ├── logger.middleware.ts
+│   │   │   │   ├── rate-limit.middleware.ts
+│   │   │   │   └── tenant.middleware.ts
+│   │   │   ├── pipes/
+│   │   │   │   ├── validation.pipe.ts
+│   │   │   │   └── parse-uuid.pipe.ts
+│   │   │   └── constants/
+│   │   │       ├── roles.ts
+│   │   │       ├── permissions.ts
+│   │   │       └── errors.ts
+│   │   │
+│   │   ├── modules/
+│   │   │   ├── auth/
+│   │   │   │   ├── auth.module.ts
+│   │   │   │   ├── auth.controller.ts
+│   │   │   │   ├── auth.service.ts
+│   │   │   │   ├── strategies/
+│   │   │   │   │   ├── jwt.strategy.ts
+│   │   │   │   │   └── refresh.strategy.ts
+│   │   │   │   └── dto/
+│   │   │   │       ├── login.dto.ts
+│   │   │   │       ├── register.dto.ts
+│   │   │   │       └── refresh-token.dto.ts
+│   │   │   │
+│   │   │   ├── users/
+│   │   │   │   ├── users.module.ts
+│   │   │   │   ├── users.controller.ts
+│   │   │   │   ├── users.service.ts
+│   │   │   │   ├── dto/
+│   │   │   │   │   ├── create-user.dto.ts
+│   │   │   │   │   └── update-user.dto.ts
+│   │   │   │   └── entities/
+│   │   │   │       └── user.entity.ts
+│   │   │   │
+│   │   │   ├── patients/
+│   │   │   │   ├── patients.module.ts
+│   │   │   │   ├── patients.controller.ts
+│   │   │   │   ├── patients.service.ts
+│   │   │   │   ├── dto/
+│   │   │   │   │   ├── create-patient.dto.ts
+│   │   │   │   │   └── update-patient.dto.ts
+│   │   │   │   └── entities/
+│   │   │   │       └── patient.entity.ts
+│   │   │   │
+│   │   │   ├── appointments/
+│   │   │   │   ├── appointments.module.ts
+│   │   │   │   ├── appointments.controller.ts
+│   │   │   │   ├── appointments.service.ts
+│   │   │   │   └── dto/
+│   │   │   │       ├── create-appointment.dto.ts
+│   │   │   │       └── update-appointment.dto.ts
+│   │   │   │
+│   │   │   ├── medical-records/
+│   │   │   │   ├── medical-records.module.ts
+│   │   │   │   ├── medical-records.controller.ts
+│   │   │   │   ├── medical-records.service.ts
+│   │   │   │   └── dto/
+│   │   │   │       ├── create-record.dto.ts
+│   │   │   │       └── update-record.dto.ts
+│   │   │   │
+│   │   │   ├── prescriptions/
+│   │   │   │   ├── prescriptions.module.ts
+│   │   │   │   ├── prescriptions.controller.ts
+│   │   │   │   ├── prescriptions.service.ts
+│   │   │   │   └── dto/
+│   │   │   │       ├── create-prescription.dto.ts
+│   │   │   │       └── dispense-prescription.dto.ts
+│   │   │   │
+│   │   │   ├── laboratory/
+│   │   │   │   ├── laboratory.module.ts
+│   │   │   │   ├── laboratory.controller.ts
+│   │   │   │   ├── laboratory.service.ts
+│   │   │   │   └── dto/
+│   │   │   │       ├── request-test.dto.ts
+│   │   │   │       └── enter-result.dto.ts
+│   │   │   │
+│   │   │   ├── radiology/
+│   │   │   │   ├── radiology.module.ts
+│   │   │   │   ├── radiology.controller.ts
+│   │   │   │   ├── radiology.service.ts
+│   │   │   │   └── dto/
+│   │   │   │       ├── request-imaging.dto.ts
+│   │   │   │       └── add-report.dto.ts
+│   │   │   │
+│   │   │   ├── pharmacy/
+│   │   │   │   ├── pharmacy.module.ts
+│   │   │   │   ├── pharmacy.controller.ts
+│   │   │   │   ├── pharmacy.service.ts
+│   │   │   │   └── dto/
+│   │   │   │       ├── create-drug.dto.ts
+│   │   │   │       └── update-stock.dto.ts
+│   │   │   │
+│   │   │   ├── billing/
+│   │   │   │   ├── billing.module.ts
+│   │   │   │   ├── billing.controller.ts
+│   │   │   │   ├── billing.service.ts
+│   │   │   │   └── dto/
+│   │   │   │       ├── create-invoice.dto.ts
+│   │   │   │       └── process-payment.dto.ts
+│   │   │   │
+│   │   │   ├── inventory/
+│   │   │   │   ├── inventory.module.ts
+│   │   │   │   ├── inventory.controller.ts
+│   │   │   │   ├── inventory.service.ts
+│   │   │   │   └── dto/
+│   │   │   │       ├── create-item.dto.ts
+│   │   │   │       └── update-stock.dto.ts
+│   │   │   │
+│   │   │   ├── workflow/
+│   │   │   │   ├── workflow.module.ts
+│   │   │   │   ├── workflow.controller.ts
+│   │   │   │   ├── workflow.service.ts
+│   │   │   │   └── engines/
+│   │   │   │       ├── workflow-engine.ts
+│   │   │   │       └── workflow-builder.ts
+│   │   │   │
+│   │   │   ├── notifications/
+│   │   │   │   ├── notifications.module.ts
+│   │   │   │   ├── notifications.service.ts
+│   │   │   │   ├── providers/
+│   │   │   │   │   ├── email.provider.ts
+│   │   │   │   │   ├── sms.provider.ts
+│   │   │   │   │   ├── whatsapp.provider.ts
+│   │   │   │   │   └── push.provider.ts
+│   │   │   │   └── dto/
+│   │   │   │       └── send-notification.dto.ts
+│   │   │   │
+│   │   │   ├── chat/
+│   │   │   │   ├── chat.module.ts
+│   │   │   │   ├── chat.gateway.ts                     # WebSocket
+│   │   │   │   ├── chat.controller.ts
+│   │   │   │   ├── chat.service.ts
+│   │   │   │   └── dto/
+│   │   │   │       ├── send-message.dto.ts
+│   │   │   │       └── create-group.dto.ts
+│   │   │   │
+│   │   │   ├── ai/
+│   │   │   │   ├── ai.module.ts
+│   │   │   │   ├── ai.controller.ts
+│   │   │   │   ├── ai.service.ts
+│   │   │   │   └── models/
+│   │   │   │       ├── clinical-decision.ts
+│   │   │   │       ├── drug-interaction.ts
+│   │   │   │       ├── prediction.ts
+│   │   │   │       └── voice-to-text.ts
+│   │   │   │
+│   │   │   ├── reports/
+│   │   │   │   ├── reports.module.ts
+│   │   │   │   ├── reports.controller.ts
+│   │   │   │   ├── reports.service.ts
+│   │   │   │   └── generators/
+│   │   │   │       ├── pdf-generator.ts
+│   │   │   │       └── excel-generator.ts
+│   │   │   │
+│   │   │   ├── integrations/
+│   │   │   │   ├── integrations.module.ts
+│   │   │   │   ├── integrations.service.ts
+│   │   │   │   └── providers/
+│   │   │   │       ├── rssb.provider.ts
+│   │   │   │       ├── mutuelle.provider.ts
+│   │   │   │       ├── national-id.provider.ts
+│   │   │   │       ├── mobile-money.provider.ts
+│   │   │   │       └── hie.provider.ts
+│   │   │   │
+│   │   │   ├── audit/
+│   │   │   │   ├── audit.module.ts
+│   │   │   │   ├── audit.controller.ts
+│   │   │   │   ├── audit.service.ts
+│   │   │   │   └── entities/
+│   │   │   │       └── audit-log.entity.ts
+│   │   │   │
+│   │   │   └── admin/
+│   │   │       ├── admin.module.ts
+│   │   │       ├── admin.controller.ts
+│   │   │       ├── admin.service.ts
+│   │   │       └── dto/
+│   │   │           ├── create-tenant.dto.ts
+│   │   │           └── update-settings.dto.ts
+│   │   │
+│   │   ├── prisma/
+│   │   │   ├── schema.prisma
+│   │   │   ├── migrations/
+│   │   │   └── seed.ts
+│   │   │
+│   │   ├── config/
+│   │   │   ├── database.config.ts
+│   │   │   ├── auth.config.ts
+│   │   │   ├── redis.config.ts
+│   │   │   └── app.config.ts
+│   │   │
+│   │   └── constants/
+│   │       ├── roles.ts
+│   │       ├── permissions.ts
+│   │       └── errors.ts
+│   │
+│   ├── .env
+│   ├── .env.example
+│   ├── nest-cli.json
+│   ├── tsconfig.json
+│   └── package.json
+│
+├── database/
+│   ├── migrations/
+│   ├── seeds/
+│   └── scripts/
+│
+├── docker/
+│   ├── docker-compose.yml
+│   ├── docker-compose.prod.yml
+│   ├── Dockerfile.web
+│   ├── Dockerfile.backend
+│   └── nginx.conf
+│
+├── infra/
+│   ├── terraform/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   └── kubernetes/
+│       ├── deployment.yaml
+│       ├── service.yaml
+│       ├── ingress.yaml
+│       └── configmap.yaml
+│
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── cd.yml
+│
+├── docs/
+│   ├── api/
+│   │   └── swagger.json
+│   ├── architecture/
+│   ├── user-manual/
+│   └── admin-guide/
+│
+├── scripts/
+│   ├── backup.sh
+│   ├── restore.sh
+│   └── deploy.sh
+│
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+│
+├── .env.example
+├── .gitignore
+├── README.md
+├── LICENSE
+└── package.json (root monorepo)
+```
+
+---
+
+# 🏗️ PART 2: MODULE ARCHITECTURE
+
+## Module Organization (Backend)
+
+```
+backend/src/modules/
+│
+├── auth/                              # Authentication Module
+│   ├── auth.module.ts
+│   ├── auth.controller.ts
+│   ├── auth.service.ts
+│   ├── strategies/
+│   │   ├── jwt.strategy.ts
+│   │   └── refresh.strategy.ts
+│   └── dto/
+│       ├── login.dto.ts
+│       ├── register.dto.ts
+│       ├── refresh-token.dto.ts
+│       ├── verify-2fa.dto.ts
+│       ├── forgot-password.dto.ts
+│       └── reset-password.dto.ts
+│
+├── users/                             # User Management Module
+│   ├── users.module.ts
+│   ├── users.controller.ts
+│   ├── users.service.ts
+│   ├── dto/
+│   │   ├── create-user.dto.ts
+│   │   ├── update-user.dto.ts
+│   │   └── assign-role.dto.ts
+│   └── entities/
+│       ├── user.entity.ts
+│       └── role.entity.ts
+│
+├── patients/                          # Patient Management Module
+│   ├── patients.module.ts
+│   ├── patients.controller.ts
+│   ├── patients.service.ts
+│   ├── dto/
+│   │   ├── create-patient.dto.ts
+│   │   ├── update-patient.dto.ts
+│   │   └── search-patient.dto.ts
+│   └── entities/
+│       └── patient.entity.ts
+│
+├── appointments/                      # Appointment Module
+│   ├── appointments.module.ts
+│   ├── appointments.controller.ts
+│   ├── appointments.service.ts
+│   ├── dto/
+│   │   ├── create-appointment.dto.ts
+│   │   ├── update-appointment.dto.ts
+│   │   └── check-in.dto.ts
+│   └── entities/
+│       └── appointment.entity.ts
+│
+├── medical-records/                   # EMR Module
+│   ├── medical-records.module.ts
+│   ├── medical-records.controller.ts
+│   ├── medical-records.service.ts
+│   ├── dto/
+│   │   ├── create-record.dto.ts
+│   │   ├── update-record.dto.ts
+│   │   ├── add-vitals.dto.ts
+│   │   └── add-diagnosis.dto.ts
+│   └── entities/
+│       └── medical-record.entity.ts
+│
+├── prescriptions/                     # Prescription Module
+│   ├── prescriptions.module.ts
+│   ├── prescriptions.controller.ts
+│   ├── prescriptions.service.ts
+│   ├── dto/
+│   │   ├── create-prescription.dto.ts
+│   │   ├── dispense-prescription.dto.ts
+│   │   └── verify-prescription.dto.ts
+│   └── entities/
+│       └── prescription.entity.ts
+│
+├── laboratory/                        # Laboratory Module
+│   ├── laboratory.module.ts
+│   ├── laboratory.controller.ts
+│   ├── laboratory.service.ts
+│   ├── dto/
+│   │   ├── request-test.dto.ts
+│   │   ├── enter-result.dto.ts
+│   │   └── validate-result.dto.ts
+│   └── entities/
+│       ├── lab-request.entity.ts
+│       └── lab-result.entity.ts
+│
+├── radiology/                         # Radiology Module
+│   ├── radiology.module.ts
+│   ├── radiology.controller.ts
+│   ├── radiology.service.ts
+│   ├── dto/
+│   │   ├── request-imaging.dto.ts
+│   │   ├── add-report.dto.ts
+│   │   └── schedule-imaging.dto.ts
+│   └── entities/
+│       └── radiology-request.entity.ts
+│
+├── pharmacy/                          # Pharmacy Module
+│   ├── pharmacy.module.ts
+│   ├── pharmacy.controller.ts
+│   ├── pharmacy.service.ts
+│   ├── dto/
+│   │   ├── create-drug.dto.ts
+│   │   ├── update-stock.dto.ts
+│   │   ├── receive-stock.dto.ts
+│   │   └── transfer-stock.dto.ts
+│   └── entities/
+│       ├── drug.entity.ts
+│       └── stock-batch.entity.ts
+│
+├── billing/                           # Billing Module
+│   ├── billing.module.ts
+│   ├── billing.controller.ts
+│   ├── billing.service.ts
+│   ├── dto/
+│   │   ├── create-invoice.dto.ts
+│   │   ├── process-payment.dto.ts
+│   │   ├── apply-discount.dto.ts
+│   │   └── process-refund.dto.ts
+│   └── entities/
+│       ├── invoice.entity.ts
+│       └── payment.entity.ts
+│
+├── insurance/                         # Insurance Module
+│   ├── insurance.module.ts
+│   ├── insurance.controller.ts
+│   ├── insurance.service.ts
+│   ├── dto/
+│   │   ├── verify-insurance.dto.ts
+│   │   ├── submit-claim.dto.ts
+│   │   └── update-claim.dto.ts
+│   └── entities/
+│       └── claim.entity.ts
+│
+├── inventory/                         # Inventory Module
+│   ├── inventory.module.ts
+│   ├── inventory.controller.ts
+│   ├── inventory.service.ts
+│   ├── dto/
+│   │   ├── create-item.dto.ts
+│   │   ├── update-stock.dto.ts
+│   │   └── transfer-item.dto.ts
+│   └── entities/
+│       └── inventory-item.entity.ts
+│
+├── workflow/                          # Workflow Engine Module
+│   ├── workflow.module.ts
+│   ├── workflow.controller.ts
+│   ├── workflow.service.ts
+│   ├── engines/
+│   │   ├── workflow-engine.ts
+│   │   ├── workflow-builder.ts
+│   │   └── workflow-executor.ts
+│   └── dto/
+│       ├── create-workflow.dto.ts
+│       └── execute-workflow.dto.ts
+│
+├── chat/                              # Chat Module
+│   ├── chat.module.ts
+│   ├── chat.gateway.ts                # WebSocket
+│   ├── chat.controller.ts
+│   ├── chat.service.ts
+│   ├── dto/
+│   │   ├── send-message.dto.ts
+│   │   ├── create-group.dto.ts
+│   │   └── emergency-alert.dto.ts
+│   └── entities/
+│       ├── message.entity.ts
+│       └── chat-group.entity.ts
+│
+├── ai/                                # AI Module
+│   ├── ai.module.ts
+│   ├── ai.controller.ts
+│   ├── ai.service.ts
+│   ├── models/
+│   │   ├── clinical-decision.ts
+│   │   ├── drug-interaction.ts
+│   │   ├── prediction.ts
+│   │   ├── voice-to-text.ts
+│   │   └── medical-coding.ts
+│   └── dto/
+│       ├── analyze-symptoms.dto.ts
+│       ├── check-interaction.dto.ts
+│       └── predict.dto.ts
+│
+├── notifications/                     # Notification Module
+│   ├── notifications.module.ts
+│   ├── notifications.controller.ts
+│   ├── notifications.service.ts
+│   ├── providers/
+│   │   ├── email.provider.ts
+│   │   ├── sms.provider.ts
+│   │   ├── whatsapp.provider.ts
+│   │   └── push.provider.ts
+│   └── dto/
+│       └── send-notification.dto.ts
+│
+├── reports/                           # Reports Module
+│   ├── reports.module.ts
+│   ├── reports.controller.ts
+│   ├── reports.service.ts
+│   ├── generators/
+│   │   ├── pdf-generator.ts
+│   │   └── excel-generator.ts
+│   └── dto/
+│       └── generate-report.dto.ts
+│
+├── integrations/                      # Integration Module
+│   ├── integrations.module.ts
+│   ├── integrations.controller.ts
+│   ├── integrations.service.ts
+│   └── providers/
+│       ├── rssb.provider.ts
+│       ├── mutuelle.provider.ts
+│       ├── national-id.provider.ts
+│       ├── mobile-money.provider.ts
+│       └── hie.provider.ts
+│
+├── audit/                             # Audit Module
+│   ├── audit.module.ts
+│   ├── audit.controller.ts
+│   ├── audit.service.ts
+│   └── entities/
+│       └── audit-log.entity.ts
+│
+└── admin/                             # Admin Module
+    ├── admin.module.ts
+    ├── admin.controller.ts
+    ├── admin.service.ts
+    ├── dto/
+    │   ├── create-tenant.dto.ts
+    │   ├── update-settings.dto.ts
+    │   └── backup-config.dto.ts
+    └── entities/
+        └── tenant.entity.ts
+```
+
+---
+
+# 🗄️ PART 3: DATABASE STRUCTURE
+
+## Prisma Schema — Core Tables
+
+```prisma
+// backend/src/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================
+// TENANT MANAGEMENT
+// =============================================================
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  domain      String?  @unique
+  config      Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  hospitals   Hospital[]
+
+  @@map("tenants")
+}
+
+model Hospital {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  code        String   @unique
+  type        String   // clinic, district, referral, teaching, private
+  address     Json
+  phone       String[]
+  email       String?
+  logoUrl     String?  @map("logo_url")
+  settings    Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  users        User[]
+  departments  Department[]
+  patients     Patient[]
+  appointments Appointment[]
+  invoices     Invoice[]
+  inventory    InventoryItem[]
+
+  @@map("hospitals")
+}
+
+// =============================================================
+// USER & AUTHENTICATION
+// =============================================================
+
+model User {
+  id                    String    @id @default(cuid())
+  hospitalId            String    @map("hospital_id")
+  hospital              Hospital  @relation(fields: [hospitalId], references: [id])
+  username              String    @unique
+  email                 String    @unique
+  passwordHash          String    @map("password_hash")
+  firstName             String    @map("first_name")
+  lastName              String    @map("last_name")
+  middleName            String?   @map("middle_name")
+  phone                 String?
+  dateOfBirth           DateTime? @map("date_of_birth")
+  gender                String?
+  profileImageUrl       String?   @map("profile_image_url")
+  roleId                String    @map("role_id")
+  role                  Role      @relation(fields: [roleId], references: [id])
+  departmentId          String?   @map("department_id")
+  department            Department? @relation(fields: [departmentId], references: [id])
+  jobTitle              String?   @map("job_title")
+  qualification         String?
+  professionalRegistration String? @map("professional_registration")
+  isActive              Boolean   @default(true) @map("is_active")
+  isLocked              Boolean   @default(false) @map("is_locked")
+  is2FAEnabled          Boolean   @default(false) @map("is_2fa_enabled")
+  twoFactorSecret       String?   @map("two_factor_secret")
+  backupCodes           Json?     @map("backup_codes")
+  lastLoginAt           DateTime? @map("last_login_at")
+  loginAttempts         Int       @default(0) @map("login_attempts")
+  lockedUntil           DateTime? @map("locked_until")
+  preferences           Json?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  deletedAt             DateTime? @map("deleted_at")
+
+  patients           Patient[]
+  medicalRecords     MedicalRecord[]
+  appointments       Appointment[]
+  prescriptions      Prescription[]
+  labRequests        LabRequest[]
+  radiologyRequests  RadiologyRequest[]
+  invoices           Invoice[]
+  payments           Payment[]
+  auditLogs          AuditLog[]
+  messagesSent       Message[] @relation("MessageSender")
+  messagesReceived   Message[] @relation("MessageReceiver")
+  chatGroups         ChatGroup[] @relation("GroupMember")
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  type        String   @default("hospital") // system, hospital, department
+  permissions Json
+  isSystemRole Boolean @default(false) @map("is_system_role")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  users User[]
+
+  @@map("roles")
+}
+
+// =============================================================
+// PATIENT MANAGEMENT
+// =============================================================
+
+model Patient {
+  id                String    @id @default(cuid())
+  hospitalId        String    @map("hospital_id")
+  hospital          Hospital  @relation(fields: [hospitalId], references: [id])
+  mrn               String    @unique @map("mrn")
+  nationalId        String?   @unique @map("national_id")
+  passportNumber    String?   @map("passport_number")
+  firstName         String    @map("first_name")
+  lastName          String    @map("last_name")
+  middleName        String?   @map("middle_name")
+  dateOfBirth       DateTime  @map("date_of_birth")
+  approximateDob    Boolean   @default(false) @map("approximate_dob")
+  gender            String?   @map("gender")
+  bloodGroup        String?   @map("blood_group")
+  rhFactor          String?   @map("rh_factor")
+  maritalStatus     String?   @map("marital_status")
+  nationality       String?   @map("nationality")
+  religion          String?   @map("religion")
+  occupation        String?   @map("occupation")
+  educationLevel    String?   @map("education_level")
+  phone             String    @map("phone")
+  phoneSecondary    String?   @map("phone_secondary")
+  email             String?   @map("email")
+  address           Json?     @map("address")
+  gpsCoordinates    String?   @map("gps_coordinates")
+  emergencyContact  Json?     @map("emergency_contact")
+  insuranceProvider String?   @map("insurance_provider")
+  insuranceNumber   String?   @map("insurance_number")
+  insuranceExpiry   DateTime? @map("insurance_expiry")
+  insuranceType     String?   @map("insurance_type")
+  allergies         Json?     @map("allergies")
+  chronicConditions Json?     @map("chronic_conditions")
+  medicalHistory    String?   @map("medical_history")
+  familyHistory     String?   @map("family_history")
+  socialHistory     Json?     @map("social_history")
+  immunizationHistory Json?   @map("immunization_history")
+  livingWill        String?   @map("living_will")
+  organDonor        Boolean   @default(false) @map("organ_donor")
+  isDeceased        Boolean   @default(false) @map("is_deceased")
+  deceasedDate      DateTime? @map("deceased_date")
+  isActive          Boolean   @default(true) @map("is_active")
+  registrationDate  DateTime  @default(now()) @map("registration_date")
+  registeredById    String    @map("registered_by_id")
+  registeredBy      User      @relation(fields: [registeredById], references: [id])
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+
+  appointments      Appointment[]
+  medicalRecords    MedicalRecord[]
+  prescriptions     Prescription[]
+  labRequests       LabRequest[]
+  radiologyRequests RadiologyRequest[]
+  invoices          Invoice[]
+  payments          Payment[]
+
+  @@index([mrn])
+  @@index([nationalId])
+  @@index([phone])
+  @@index([firstName, lastName])
+  @@map("patients")
+}
+
+// =============================================================
+// APPOINTMENTS
+// =============================================================
+
+model Appointment {
+  id              String    @id @default(cuid())
+  hospitalId      String    @map("hospital_id")
+  hospital        Hospital  @relation(fields: [hospitalId], references: [id])
+  patientId       String    @map("patient_id")
+  patient         Patient   @relation(fields: [patientId], references: [id])
+  doctorId        String    @map("doctor_id")
+  doctor          User      @relation(fields: [doctorId], references: [id])
+  departmentId    String?   @map("department_id")
+  department      Department? @relation(fields: [departmentId], references: [id])
+  appointmentDate DateTime  @map("appointment_date")
+  duration        Int       @default(30)
+  type            String    @map("type")
+  priority        String    @default("NORMAL") @map("priority")
+  status          String    @default("SCHEDULED") @map("status")
+  queueNumber     String?   @map("queue_number")
+  expectedWaitTime Int?     @map("expected_wait_time")
+  actualWaitTime  Int?      @map("actual_wait_time")
+  purpose         String?   @map("purpose")
+  notes           String?   @map("notes")
+  reminderSent    Boolean   @default(false) @map("reminder_sent")
+  reminderMethod  String?   @map("reminder_method")
+  checkInTime     DateTime? @map("check_in_time")
+  checkOutTime    DateTime? @map("check_out_time")
+  walkIn          Boolean   @default(false) @map("walk_in")
+  referredFrom    String?   @map("referred_from")
+  referredTo      String?   @map("referred_to")
+  createdById     String    @map("created_by_id")
+  createdBy       User      @relation(fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([appointmentDate])
+  @@index([status])
+  @@map("appointments")
+}
+
+// =============================================================
+// MEDICAL RECORDS (EMR)
+// =============================================================
+
+model MedicalRecord {
+  id                    String    @id @default(cuid())
+  hospitalId            String    @map("hospital_id")
+  hospital              Hospital  @relation(fields: [hospitalId], references: [id])
+  patientId             String    @map("patient_id")
+  patient               Patient   @relation(fields: [patientId], references: [id])
+  doctorId              String    @map("doctor_id")
+  doctor                User      @relation(fields: [doctorId], references: [id])
+  visitDate             DateTime  @map("visit_date")
+  visitNumber           String?   @map("visit_number")
+  visitType             String    @map("visit_type")
+  visitMode             String?   @map("visit_mode")
+  arrivalTime           DateTime? @map("arrival_time")
+  triageTime            DateTime? @map("triage_time")
+  doctorVisitTime       DateTime? @map("doctor_visit_time")
+  dischargeTime         DateTime? @map("discharge_time")
+  chiefComplaint        String?   @map("chief_complaint")
+  historyOfPresentIllness String? @map("history_of_present_illness")
+  pastMedicalHistory    String?   @map("past_medical_history")
+  familyHistory         String?   @map("family_history")
+  socialHistory         String?   @map("social_history")
+  reviewOfSystems       Json?     @map("review_of_systems")
+  physicalExamination   Json?     @map("physical_examination")
+  vitals                Json?     @map("vitals")
+  diagnosis             Json?     @map("diagnosis")
+  differentialDiagnosis Json?     @map("differential_diagnosis")
+  treatmentPlan         String?   @map("treatment_plan")
+  clinicalNotes         String?   @map("clinical_notes")
+  progressNotes         String?   @map("progress_notes")
+  isConfidential        Boolean   @default(false) @map("is_confidential")
+  isUrgent              Boolean   @default(false) @map("is_urge
