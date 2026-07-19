@@ -11,7 +11,7 @@ export async function getLiveKPIs(hospitalId) {
 
   const [queueCount, bedRow, revenueRow, criticalRow, pendingLabRow] = await Promise.all([
     db.prepare(`SELECT COUNT(*) as n FROM appointments WHERE hospital_id=? AND appointment_date=? AND status IN ('checked-in','in-progress')`).get(hid, today),
-    db.prepare(`SELECT COUNT(*) as total, SUM(CASE WHEN status='Occupied' THEN 1 ELSE 0 END) as occupied FROM inventory_items WHERE hospital_id=? AND category='Bed'`).get(hid),
+    db.prepare(`SELECT COUNT(*) as total, 0 as occupied FROM inventory_items WHERE hospital_id=? AND category='Bed' AND is_active=1`).get(hid),
     db.prepare(`SELECT COALESCE(SUM(paid),0) as revenue FROM invoices WHERE hospital_id=? AND date(created_at)=?`).get(hid, today),
     db.prepare(`SELECT COUNT(*) as n FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hospital_id=?) AND type='danger' AND read_at IS NULL`).get(hid),
     db.prepare(`SELECT COUNT(*) as n FROM lab_requests WHERE hospital_id=? AND status IN ('ordered','collected','received')`).get(hid),
