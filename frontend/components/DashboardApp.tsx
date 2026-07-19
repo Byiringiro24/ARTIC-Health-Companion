@@ -71,6 +71,10 @@ import { AuditModule }        from "@/components/modules/AuditModule";
 import { PatientPortal }      from "@/components/modules/PatientPortal";
 import { SettingsModule }     from "@/components/modules/SettingsModule";
 
+// ── Super Admin full portal (lazy-loaded to avoid circular deps) ──────────────
+import dynamic from "next/dynamic";
+const SuperAdminPortal = dynamic(() => import("@/app/(dashboard)/admin/page"), { ssr: false, loading: () => <div style={{padding:32,textAlign:"center",color:"#6b7280"}}>Loading Super Admin portal…</div> });
+
 import type { AppUser, Appointment, ModuleKey, Patient } from "@/types/hms";
 
 const COLORS = ["#027c8e", "#0f9f6e", "#5b5fc7", "#b7791f", "#c23b22", "#0ea5e9"];
@@ -284,7 +288,7 @@ export function DashboardApp() {
 function ModuleRenderer({ user, module, query }: { user: AppUser; module: ModuleKey; query: string }) {
   switch (module) {
     case "overview":         return <OverviewModule user={user} />;
-    case "admin":            return <AdminModule />;
+    case "admin":            return <SuperAdminPortal />;
     case "patients":         return <PatientsModule user={user} query={query} />;
     case "appointments":     return <AppointmentsModule user={user} />;
     case "queue":            return <QueueModule />;
