@@ -123,8 +123,9 @@ export async function bulkSetTierFeatures(hospitalId, tier, approvedBy) {
 // ── Feature Access Requests ───────────────────────────────────────────────────
 export async function getAccessRequests({ status } = {}) {
   const db = getDb();
-  const where = status ? "WHERE far.status=?" : "";
-  const params = status ? [status] : [];
+  // "all" means no filter; otherwise filter by specific status
+  const where = (status && status !== "all") ? "WHERE far.status=?" : "";
+  const params = (status && status !== "all") ? [status] : [];
   return db.prepare(`
     SELECT far.*, ff.name as feature_name, ff.label as feature_label, ff.icon,
            h.name as hospital_name, h.id as hospital_id,
@@ -241,7 +242,7 @@ export async function getSystemStats() {
 
   // Technical KPIs only (no patient clinical data)
   const todayAppts = await db.prepare(`SELECT COUNT(*) as n FROM appointments WHERE appointment_date=CURRENT_DATE`).get();
-  const todayLabs  = await db.prepare(`SELECT COUNT(*) as n FROM lab_requests WHERE date(ordered_at)=CURRENT_DATE`).get();
+  const todayLabs  = await db.prepare(`SELECT COUNT(*) as n FROM lab_requests WHERE ordered_at::date = CURRENT_DATE`).get();
 
   return {
     // System health
@@ -257,4 +258,187 @@ export async function getSystemStats() {
     todayLabTests:     todayLabs?.n  || 0,
     privacyNote: "All patient counts are aggregated. Individual patient data is not accessible to Super Admin per Rwanda Data Protection Law (2021).",
   };
+}
+
+// ── Bulk Feature Operations ───────────────────────────────────────────────────
+export async function bulkUpdateFeatureFlags(updates) {
+  if (!Array.isArray(updates)) throw new AppError("Expected array of updates", 400, "INVALID_INPUT");
+  const results = [];
+  for (const u of updates) {
+    if (!u.id) continue;
+    try { results.push(await updateFeatureFlag(u.id, u)); } catch { /* skip invalid */ }
+  }
+  return { updated: results.length, results };
+}
+
+export async function importFeatureFlags(features, importedBy) {
+  if (!Array.isArray(features)) throw new AppError("Expected array of features", 400, "INVALID_INPUT");
+  const db = getDb(); let created = 0; let updated = 0;
+  for (const f of features) {
+    if (!f.name || !f.label) continue;
+    const existing = await db.prepare(`SELECT id FROM feature_flags WHERE name=?`).get(f.name);
+    if (existing) { await updateFeatureFlag(existing.id, f); updated++; }
+    else {
+      const id = f.id || `ff-${uuidv4().slice(0,8)}`;
+      await db.prepare(`INSERT INTO feature_flags (id,name,label,description,category,icon,default_status,tier_required,requires_approval,access_message,sort_order) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`)
+        .run(id, f.name, f.label, f.description||f.label, f.category||"Other", f.icon||"⚙️", f.defaultStatus||f.default_status||"active", f.tierRequired||f.tier_required||"basic", f.requiresApproval||0, f.accessMessage||f.access_message||null, f.sort_order||0);
+      created++;
+    }
+  }
+  return { imported: created + updated, created, updated };
+}
+
+// ── Hospital detail, update, delete ──────────────────────────────────────────
+export async function getHospitalById(hospitalId) {
+  const db = getDb();
+  const h = await db.prepare(`
+    SELECT h.*, s.tier, s.status as sub_status, s.price_per_month, s.expires_at, s.trial_ends_at,
+           (SELECT COUNT(*) FROM users u WHERE u.hospital_id=h.id AND u.deleted_at IS NULL AND u.is_active=1) as active_users,
+           (SELECT COUNT(*) FROM hospital_feature_access hfa WHERE hfa.hospital_id=h.id AND hfa.access_status='active') as active_features
+    FROM hospitals h
+    LEFT JOIN subscriptions s ON s.hospital_id=h.id
+    WHERE h.id=? AND h.deleted_at IS NULL
+  `).get(hospitalId);
+  if (!h) throw new NotFoundError("Hospital");
+  return h;
+}
+
+export async function updateHospital(hospitalId, data) {
+  const db = getDb();
+  const h = await db.prepare(`SELECT id FROM hospitals WHERE id=? AND deleted_at IS NULL`).get(hospitalId);
+  if (!h) throw new NotFoundError("Hospital");
+  const fields = []; const vals = [];
+  const map = { name:"name", email:"email", phone:"phone", type:"type", mohCode:"moh_code", address:"address", website:"website" };
+  for (const [k, col] of Object.entries(map)) {
+    if (data[k] !== undefined) { fields.push(`${col}=?`); vals.push(data[k]); }
+  }
+  if (!fields.length) return getHospitalById(hospitalId);
+  fields.push("updated_at=CURRENT_TIMESTAMP"); vals.push(hospitalId);
+  await db.prepare(`UPDATE hospitals SET ${fields.join(",")} WHERE id=?`).run(...vals);
+  return getHospitalById(hospitalId);
+}
+
+export async function softDeleteHospital(hospitalId, adminId) {
+  const db = getDb();
+  await db.prepare(`UPDATE hospitals SET deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(hospitalId);
+  await db.prepare(`UPDATE subscriptions SET status='cancelled',updated_at=CURRENT_TIMESTAMP WHERE hospital_id=?`).run(hospitalId);
+}
+
+// ── Invoice detail + status update ───────────────────────────────────────────
+export async function getInvoiceById(invoiceId) {
+  const db = getDb();
+  const inv = await db.prepare(`SELECT si.*, h.name as hospital_name, s.tier FROM subscription_invoices si JOIN hospitals h ON h.id=si.hospital_id LEFT JOIN subscriptions s ON s.hospital_id=si.hospital_id WHERE si.id=?`).get(invoiceId);
+  if (!inv) throw new NotFoundError("Invoice");
+  return inv;
+}
+
+export async function updateInvoiceStatus(invoiceId, status, adminId) {
+  const db = getDb();
+  const inv = await db.prepare(`SELECT id FROM subscription_invoices WHERE id=?`).get(invoiceId);
+  if (!inv) throw new NotFoundError("Invoice");
+  const paidAt = status === "paid" ? "CURRENT_TIMESTAMP" : "NULL";
+  await db.prepare(`UPDATE subscription_invoices SET status=?,paid_at=${status==="paid"?"CURRENT_TIMESTAMP":"NULL"},updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(status, invoiceId);
+  return getInvoiceById(invoiceId);
+}
+
+// ── Tier Configurations ───────────────────────────────────────────────────────
+const DEFAULT_TIER_CONFIGS = {
+  trial:      { price: 0,    maxUsers: 3,   support: "email",     features: ["patients","appointments","billing"], trialDays: 14 },
+  basic:      { price: 50,   maxUsers: 10,  support: "email",     features: ["patients","appointments","billing","laboratory","pharmacy","nursing"] },
+  premium:    { price: 120,  maxUsers: 30,  support: "priority",  features: ["all_basic","radiology","inpatient","insurance","reports","surveillance"] },
+  pro:        { price: 250,  maxUsers: 100, support: "24/7",      features: ["all_premium","ai","telemedicine","fhir","blood-bank"] },
+  enterprise: { price: null, maxUsers: null,support: "dedicated", features: ["all","white-label","multi-tenant"] },
+};
+
+export async function getTierConfigs() {
+  const db = getDb();
+  // Try to load from DB first (so edits persist)
+  try {
+    const rows = await db.prepare(`SELECT tier, config FROM tier_configs`).all();
+    if (rows.length > 0) {
+      return rows.map(r => ({ tier: r.tier, ...JSON.parse(r.config) }));
+    }
+  } catch { /* table may not exist yet — fall back to defaults */ }
+  return Object.entries(DEFAULT_TIER_CONFIGS).map(([tier, config]) => ({ tier, ...config }));
+}
+
+export async function updateTierConfig(tier, data) {
+  const db = getDb();
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS tier_configs (tier TEXT PRIMARY KEY, config TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+    const existing = await db.prepare(`SELECT tier FROM tier_configs WHERE tier=?`).get(tier);
+    const config = JSON.stringify({ ...DEFAULT_TIER_CONFIGS[tier], ...data });
+    if (existing) { await db.prepare(`UPDATE tier_configs SET config=?,updated_at=CURRENT_TIMESTAMP WHERE tier=?`).run(config, tier); }
+    else { await db.prepare(`INSERT INTO tier_configs (tier,config) VALUES(?,?)`).run(tier, config); }
+    return { tier, ...JSON.parse(config) };
+  } catch(e) { throw new AppError(`Failed to update tier config: ${e.message}`, 500, "DB_ERROR"); }
+}
+
+// ── System Audit Logs (no clinical data) ─────────────────────────────────────
+export async function getSystemAuditLogs({ page=1, limit=50, action, module, dateFrom, dateTo } = {}) {
+  const db = getDb();
+  const offset = (page-1)*limit;
+  const where = []; const params = [];
+  // Only show system-level actions, NOT clinical data
+  where.push("(al.module IN ('auth','super-admin','privacy-guard','feature-flags') OR al.result='denied')");
+  if (action)   { where.push("al.action=?"); params.push(action); }
+  if (module)   { where.push("al.module=?"); params.push(module); }
+  if (dateFrom) { where.push("al.created_at>=?"); params.push(dateFrom); }
+  if (dateTo)   { where.push("al.created_at<=?"); params.push(dateTo); }
+  const cond = where.length ? "WHERE " + where.join(" AND ") : "";
+  const total = (await db.prepare(`SELECT COUNT(*) as n FROM audit_logs al ${cond}`).get(...params))?.n ?? 0;
+  const rows  = await db.prepare(`SELECT al.id,al.user_email,al.user_role,al.action,al.module,al.result,al.reason,al.ip_address,al.created_at FROM audit_logs al ${cond} ORDER BY al.created_at DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
+  return { data: rows, meta: { total, page:+page, limit:+limit, totalPages: Math.ceil(total/limit) } };
+}
+
+// ── AI Companion ──────────────────────────────────────────────────────────────
+const AI_KB = {
+  "medication": "Based on Rwanda MOH Drug Formulary, standard dosing protocols apply. Always verify current formulary editions and consult clinical pharmacist for complex cases.",
+  "clinical": "Rwanda MOH Clinical Protocols (2024 edition) provide the authoritative guidance. For emergencies, follow ACLS/ATLS protocols adapted for Rwanda context.",
+  "drug interaction": "Use the Rwanda National Formulary and WHO drug interaction checker. Key interactions to monitor: warfarin, aminoglycosides, NSAIDs with renal impairment.",
+  "health education": "MOH Community Health Education guidelines emphasize participatory approaches. Use local languages and culturally appropriate materials.",
+  "nutrition": "Rwanda Nutrition Policy (2018-2022) guides nutritional interventions. Malnutrition screening using MUAC is standard in all health facilities.",
+  "mental health": "Rwanda Mental Health Policy promotes community-based care. IHSI+ and other community health worker programs are key delivery mechanisms.",
+  "default": "ARTIC AI provides evidence-based guidance aligned with Rwanda MOH Clinical Protocols (2024). For detailed clinical guidelines, consult the Rwanda Integrated Clinic Manual or contact your facility medical director. All clinical decisions require review by qualified medical professionals.",
+};
+
+export async function processAIQuery(query, userId) {
+  if (!query?.trim()) throw new AppError("Query is required", 400, "INVALID_INPUT");
+  const q = query.toLowerCase();
+  let response = AI_KB.default;
+  for (const [key, val] of Object.entries(AI_KB)) {
+    if (key !== "default" && q.includes(key)) { response = val; break; }
+  }
+  response = `Regarding your query about "${query}":\n\n${response}\n\n⚕️ This is informational guidance only. All clinical decisions must be made by qualified medical professionals licensed in Rwanda.`;
+  // Store in DB if table exists
+  try {
+    const db = getDb();
+    await db.prepare(`CREATE TABLE IF NOT EXISTS ai_query_history (id TEXT PRIMARY KEY, user_id TEXT, query TEXT NOT NULL, response TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+    await db.prepare(`INSERT INTO ai_query_history (id,user_id,query,response) VALUES(?,?,?,?)`).run(`aiq-${uuidv4().slice(0,8)}`, userId||null, query, response);
+  } catch { /* non-blocking */ }
+  return { query, response, timestamp: new Date().toISOString() };
+}
+
+export async function getAIHistory(userId, { limit=20 } = {}) {
+  try {
+    const db = getDb();
+    await db.prepare(`CREATE TABLE IF NOT EXISTS ai_query_history (id TEXT PRIMARY KEY, user_id TEXT, query TEXT NOT NULL, response TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+    return db.prepare(`SELECT id,query,response,created_at FROM ai_query_history WHERE user_id=? ORDER BY created_at DESC LIMIT ?`).all(userId, +limit);
+  } catch { return []; }
+}
+
+// ── Chat Users (non-clinical listing) ────────────────────────────────────────
+export async function getActiveChatUsers() {
+  const db = getDb();
+  return db.prepare(`
+    SELECT u.id, u.first_name||' '||u.last_name as name, r.name as role,
+           h.name as hospital, u.email,
+           SUBSTRING(u.first_name,1,1)||SUBSTRING(u.last_name,1,1) as initials
+    FROM users u
+    JOIN roles r ON r.id=u.role_id
+    JOIN hospitals h ON h.id=u.hospital_id
+    WHERE u.deleted_at IS NULL AND u.is_active=1
+      AND r.name != 'system-admin'
+    ORDER BY r.name, u.first_name
+  `).all();
 }
