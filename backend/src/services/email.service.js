@@ -109,3 +109,91 @@ export function emailInvoice({ patientName, invoiceNumber, amount, items, dueDat
     </div>`,
   };
 }
+
+export function emailHospitalWelcome({ hospitalName, mohCode, tier, loginUrl, adminEmail, tempPassword, expiryDate }) {
+  return {
+    subject: `Welcome to ARTIC HMS — ${hospitalName} is now registered`,
+    html: `<div style="font-family:sans-serif;max-width:620px;margin:0 auto;background:#f8fafc;padding:24px">
+      <div style="background:linear-gradient(135deg,#0891b2,#7c3aed);padding:24px;border-radius:12px;text-align:center;margin-bottom:20px">
+        <h1 style="color:white;margin:0;font-size:22px">🏥 ARTIC Health Companion</h1>
+        <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:14px">Hospital Management System</p>
+      </div>
+
+      <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e2e8f0">
+        <h2 style="color:#0f172a;margin:0 0 16px">Welcome — <strong>${hospitalName}</strong></h2>
+        <p style="color:#374151;line-height:1.6">Your hospital has been successfully registered on the ARTIC Health Companion platform. Here are your registration details:</p>
+
+        <table style="width:100%;border-collapse:collapse;margin:16px 0">
+          <tr style="background:#f8fafc">
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;font-weight:600;color:#374151;width:40%">Hospital Name</td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#0f172a">${hospitalName}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;font-weight:600;color:#374151">MOH Code</td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#0891b2;font-weight:700;font-family:monospace;font-size:15px">${mohCode}</td>
+          </tr>
+          <tr style="background:#f8fafc">
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;font-weight:600;color:#374151">Subscription Tier</td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0"><span style="background:#ecfeff;color:#0891b2;padding:2px 10px;border-radius:20px;font-weight:700">${tier}</span></td>
+          </tr>
+          <tr>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;font-weight:600;color:#374151">Admin Login</td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#0f172a">${adminEmail}</td>
+          </tr>
+          <tr style="background:#fff7ed">
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;font-weight:600;color:#374151">Temporary Password</td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;color:#d97706">${tempPassword}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;font-weight:600;color:#374151">Trial Expires</td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#0f172a">${expiryDate}</td>
+          </tr>
+        </table>
+
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:16px 0">
+          <strong style="color:#d97706">⚠️ Security Notice:</strong>
+          <p style="color:#92400e;margin:6px 0 0;font-size:13px">You must change this temporary password on your first login. Your MOH code is unique and cannot be transferred. Keep it confidential.</p>
+        </div>
+
+        <div style="text-align:center;margin:20px 0">
+          <a href="${loginUrl}" style="background:linear-gradient(135deg,#0891b2,#7c3aed);color:white;padding:12px 28px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:700;font-size:15px">
+            🔐 Login & Change Password
+          </a>
+        </div>
+
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px">
+          <p style="color:#065f46;margin:0;font-size:13px;line-height:1.6">
+            ✅ Your hospital data is protected under Rwanda Data Protection Law (2021)<br>
+            ✅ All patient records remain confidential and HIPAA-equivalent compliant<br>
+            ✅ 24/7 technical support: <a href="mailto:support@artic.health" style="color:#059669">support@artic.health</a>
+          </p>
+        </div>
+      </div>
+
+      <p style="color:#94a3b8;font-size:11px;text-align:center;margin-top:16px">ARTIC Health Companion · Powered by ARTIC Health Technology Rwanda<br>This is an automated message. Do not reply directly to this email.</p>
+    </div>`,
+    text: `Welcome to ARTIC HMS!\n\nHospital: ${hospitalName}\nMOH Code: ${mohCode}\nTier: ${tier}\nLogin: ${adminEmail}\nTemp Password: ${tempPassword}\nExpiry: ${expiryDate}\n\nLogin at: ${loginUrl}\n\nChange your password on first login!`,
+  };
+}
+
+export function emailHospitalPasswordSetup({ name, hospitalName, setupLink, expiresIn }) {
+  return {
+    subject: `Set Up Your ARTIC HMS Password — ${hospitalName}`,
+    html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <div style="background:linear-gradient(135deg,#0891b2,#7c3aed);padding:20px;border-radius:12px;text-align:center;margin-bottom:16px">
+        <h1 style="color:white;margin:0;font-size:20px">🔐 ARTIC Health Companion</h1>
+      </div>
+      <div style="background:white;padding:22px;border-radius:12px;border:1px solid #e2e8f0">
+        <h2 style="color:#0f172a">Hello, <strong>${name}</strong></h2>
+        <p>Your account has been created for <strong>${hospitalName}</strong> on ARTIC Health Companion.</p>
+        <p>Click the button below to set up your password and activate your account:</p>
+        <div style="text-align:center;margin:20px 0">
+          <a href="${setupLink}" style="background:#0891b2;color:white;padding:12px 26px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:700">
+            ✅ Set My Password
+          </a>
+        </div>
+        <p style="color:#64748b;font-size:13px">This link expires in <strong>${expiresIn}</strong>. If you did not expect this email, contact your hospital administrator.</p>
+      </div>
+    </div>`,
+  };
+}
