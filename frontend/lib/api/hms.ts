@@ -200,17 +200,51 @@ export const deathsApi = {
 
 // ─── Super Admin API ──────────────────────────────────────────────────────────
 export const superAdminApi = {
-  stats:             ()                                   => get("/api/super-admin/stats"),
-  listFeatures:      (params?: Record<string,string>)    => get(`/api/super-admin/features?${new URLSearchParams(params)}`),
-  updateFeature:     (id: string, data: unknown)         => patch(`/api/super-admin/features/${id}`, data),
-  listHospitals:     (params?: Record<string,string>)    => get(`/api/super-admin/hospitals?${new URLSearchParams(params)}`),
-  createHospital:    (data: unknown)                     => post("/api/super-admin/hospitals", data),
-  updateSubscription:(id: string, tier: string)          => patch(`/api/super-admin/hospitals/${id}/subscription`, { tier }),
-  getHospitalFeatures:(id: string)                       => get(`/api/super-admin/hospitals/${id}/features`),
-  setFeatureAccess:  (hospitalId: string, data: unknown) => post(`/api/super-admin/hospitals/${hospitalId}/features`, data),
-  setTierFeatures:   (hospitalId: string, tier: string)  => post(`/api/super-admin/hospitals/${hospitalId}/tier`, { tier }),
-  listRequests:      (params?: Record<string,string>)    => get(`/api/super-admin/requests?${new URLSearchParams(params)}`),
-  resolveRequest:    (id: string, decision: string, adminNotes: string) => patch(`/api/super-admin/requests/${id}`, { decision, adminNotes }),
-  listInvoices:      (params?: Record<string,string>)    => get(`/api/super-admin/invoices?${new URLSearchParams(params)}`),
-  createInvoice:     (data: unknown)                     => post("/api/super-admin/invoices", data),
+  // Stats & overview
+  stats:              ()                                   => get("/api/super-admin/stats"),
+
+  // Feature flags
+  listFeatures:       (params?: Record<string,string>)    => get(`/api/super-admin/features?${new URLSearchParams(params)}`),
+  updateFeature:      (id: string, data: unknown)         => patch(`/api/super-admin/features/${id}`, data),
+  bulkUpdateFeatures: (data: unknown)                     => post("/api/super-admin/features/bulk", data),
+  exportFeatures:     ()                                   => get("/api/super-admin/features/export"),
+  bulkImportFeatures: (data: unknown)                     => post("/api/super-admin/features/import", data),
+
+  // Hospitals & subscriptions
+  listHospitals:      (params?: Record<string,string>)    => get(`/api/super-admin/hospitals?${new URLSearchParams(params)}`),
+  createHospital:     (data: unknown)                     => post("/api/super-admin/hospitals", data),
+  updateSubscription: (id: string, tier: string)          => patch(`/api/super-admin/hospitals/${id}/subscription`, { tier }),
+  getHospitalFeatures:(id: string)                        => get(`/api/super-admin/hospitals/${id}/features`),
+  setFeatureAccess:   (hospitalId: string, data: unknown) => post(`/api/super-admin/hospitals/${hospitalId}/features`, data),
+  setTierFeatures:    (hospitalId: string, tier: string)  => post(`/api/super-admin/hospitals/${hospitalId}/tier`, { tier }),
+
+  // Feature access requests
+  listRequests:       (params?: Record<string,string>)    => get(`/api/super-admin/requests?${new URLSearchParams(params)}`),
+  resolveRequest:     (id: string, decision: string, adminNotes: string) => patch(`/api/super-admin/requests/${id}`, { decision, adminNotes }),
+
+  // Billing / invoices
+  listInvoices:       (params?: Record<string,string>)    => get(`/api/super-admin/invoices?${new URLSearchParams(params)}`),
+  createInvoice:      (data: unknown)                     => post("/api/super-admin/invoices", data),
+
+  // Tier configurations
+  getTierConfigs:     ()                                   => get("/api/super-admin/tiers"),
+  updateTierConfig:   (tier: string, data: unknown)        => patch(`/api/super-admin/tiers/${tier}`, data),
+
+  // Pricing rules
+  getPricingRules:    ()                                   => get("/api/super-admin/pricing-rules"),
+  createPricingRule:  (data: unknown)                      => post("/api/super-admin/pricing-rules", data),
+  updatePricingRule:  (id: string, data: unknown)          => patch(`/api/super-admin/pricing-rules/${id}`, data),
+
+  // Chat system
+  listChatUsers:      (params?: Record<string,string>)     => get(`/api/super-admin/chat/users?${new URLSearchParams(params)}`),
+  listConversations:  (params?: Record<string,string>)     => get(`/api/super-admin/chat/conversations?${new URLSearchParams(params)}`),
+  getConversationMessages: (conversationId: string)        => get(`/api/super-admin/chat/conversations/${conversationId}/messages`),
+  sendChatMessage:    (conversationId: string, data: unknown) => post(`/api/super-admin/chat/conversations/${conversationId}/messages`, data),
+
+  // AI Companion
+  queryAI:            (data: unknown)                      => post("/api/super-admin/ai/query", data),
+  getAIHistory:       (params?: Record<string,string>)     => get(`/api/super-admin/ai/history?${new URLSearchParams(params)}`),
+
+  // Audit logs
+  getAuditLogs:       (params?: Record<string,string>)     => get(`/api/super-admin/audit?${new URLSearchParams(params)}`),
 };
