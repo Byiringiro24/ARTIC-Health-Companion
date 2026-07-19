@@ -241,7 +241,7 @@ export async function getSystemStats() {
   const tierCounts = await db.prepare(`SELECT tier, COUNT(*) as count FROM subscriptions GROUP BY tier`).all();
 
   // Technical KPIs only (no patient clinical data)
-  const todayAppts = await db.prepare(`SELECT COUNT(*) as n FROM appointments WHERE appointment_date=CURRENT_DATE`).get();
+  const todayAppts = await db.prepare(`SELECT COUNT(*) as n FROM appointments WHERE appointment_date::date = CURRENT_DATE`).get();
   const todayLabs  = await db.prepare(`SELECT COUNT(*) as n FROM lab_requests WHERE ordered_at::date = CURRENT_DATE`).get();
 
   return {
