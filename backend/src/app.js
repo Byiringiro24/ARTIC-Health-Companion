@@ -31,6 +31,11 @@ import inventoryRoutes      from "./modules/inventory/inventory.routes.js";
 import radiologyRoutes      from "./modules/radiology/radiology.routes.js";
 import notificationsRoutes  from "./modules/notifications/notifications.routes.js";
 import reportsRoutes        from "./modules/reports/reports.routes.js";
+import inpatientRoutes      from "./modules/inpatient/inpatient.routes.js";
+import nursingRoutes        from "./modules/nursing/nursing.routes.js";
+import vaccinationRoutes    from "./modules/registries/vaccinations/vaccinations.routes.js";
+import birthsRoutes         from "./modules/registries/births/births.routes.js";
+import deathsRoutes         from "./modules/registries/deaths/deaths.routes.js";
 
 // ── Legacy shim data (in-memory, for backward-compat endpoints) ───────────────
 import { modules, roles, users as legacyUsers, auditLogs } from "./data.js";
@@ -91,6 +96,11 @@ app.use("/api/inventory",       inventoryRoutes);
 app.use("/api/radiology",       radiologyRoutes);
 app.use("/api/notifications",   notificationsRoutes);
 app.use("/api/reports",         reportsRoutes);
+app.use("/api/inpatient",       inpatientRoutes);
+app.use("/api/nursing",         nursingRoutes);
+app.use("/api/registry/vaccinations", vaccinationRoutes);
+app.use("/api/registry/births",       birthsRoutes);
+app.use("/api/registry/deaths",       deathsRoutes);
 
 // ── Legacy shim routes (keep existing frontend working) ───────────────────────
 function legacyUser(req) {

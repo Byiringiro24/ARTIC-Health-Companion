@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { authenticate } from "../../middleware/auth.js";
+import { authenticate, requireModule } from "../../middleware/auth.js";
 import * as ctrl from "./pharmacy.controller.js";
 
 const router = Router();
 router.use(authenticate);
+router.use(requireModule("pharmacy"));
 router.get("/prescriptions",              ctrl.listRx);
 router.get("/prescriptions/:id",          ctrl.getRx);
 router.post("/prescriptions",             ctrl.createRx);

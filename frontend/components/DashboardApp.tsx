@@ -1,7 +1,7 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle, AlertTriangle, ArrowUpRight, Bell, CheckCircle,
   Download, Eye, Info, LogOut, Plus, Search, Send, Smartphone, X,
@@ -80,6 +80,7 @@ const COLORS = ["#027c8e", "#0f9f6e", "#5b5fc7", "#b7791f", "#c23b22", "#0ea5e9"
 // ─────────────────────────────────────────────────────────────────────────────
 export function DashboardApp() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { show } = useToast();
   const [user, setUser] = useState<AppUser | null>(null);
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
@@ -98,7 +99,11 @@ export function DashboardApp() {
     if (!session) { router.replace("/login"); return; }
     setUser(session);
     const roleDef = roleDefinitions[session.role] ?? roleDefinitions.doctor;
-    setActiveModule(roleDef.modules[0] ?? "overview");
+    // Honour ?module= deep-link param if the role has access to it
+    const deepLink = searchParams?.get("module") as ModuleKey | null;
+    const defaultModule = roleDef.modules[0] ?? "overview";
+    const startModule = (deepLink && roleDef.modules.includes(deepLink)) ? deepLink : defaultModule;
+    setActiveModule(startModule);
   }, [router]);
 
   // Hydrate real data from API on mount (falls back to demo data silently)

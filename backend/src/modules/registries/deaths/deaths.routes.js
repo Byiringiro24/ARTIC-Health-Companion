@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { authenticate } from "../../../middleware/auth.js";
+import { asyncHandler } from "../../../middleware/errorHandler.js";
+import * as svc from "./deaths.service.js";
+const router = Router(); router.use(authenticate);
+const h = r => r.user?.hospitalId || "hosp-001";
+router.get("/",      asyncHandler(async (req, res) => res.json(await svc.getDeathsList({ ...req.query, hospitalId: h(req) }))));
+router.get("/stats", asyncHandler(async (req, res) => res.json(await svc.getMortalityStats(h(req), req.query.month))));
+router.get("/:id",   asyncHandler(async (req, res) => res.json(await svc.getDeathById(req.params.id))));
+router.post("/",     asyncHandler(async (req, res) => res.status(201).json(await svc.registerDeath(req.body, req.user?.id, h(req)))));
+export default router;

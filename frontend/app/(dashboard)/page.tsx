@@ -1,5 +1,10 @@
-import { RoutePageShell } from "@/components/RoutePageShell";
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function Page() {
-  return <RoutePageShell />;
+// (dashboard)/ root — redirect to the main app
+export default function DashboardRootPage() {
+  const router = useRouter();
+  useEffect(() => { router.replace("/dashboard"); }, [router]);
+  return null;
 }

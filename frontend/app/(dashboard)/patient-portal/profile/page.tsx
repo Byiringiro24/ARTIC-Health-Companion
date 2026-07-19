@@ -1,5 +1,2 @@
-import { RoutePageShell } from "@/components/RoutePageShell";
-
-export default function Page() {
-  return <RoutePageShell />;
-}
+﻿import { RoutePageShell } from "@/components/RoutePageShell";
+export default function Page() { return <RoutePageShell title="My Profile" />; }

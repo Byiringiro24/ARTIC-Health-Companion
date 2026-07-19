@@ -1,0 +1,15 @@
+import { Router } from "express";
+import { authenticate, requireModule } from "../../middleware/auth.js";
+import * as ctrl from "./inpatient.controller.js";
+const router = Router();
+router.use(authenticate);
+router.use(requireModule("inpatient"));
+router.get("/beds",                 ctrl.getBeds);
+router.patch("/beds/:id/status",    ctrl.updateBed);
+router.get("/admissions",           ctrl.getAdmissions);
+router.get("/admissions/:id",       ctrl.getAdmission);
+router.post("/admit",               ctrl.admit);
+router.post("/admissions/:id/discharge", ctrl.discharge);
+router.post("/admissions/:id/transfer",  ctrl.transfer);
+router.post("/ward-round",          ctrl.wardRound);
+export default router;

@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { authenticate } from "../../../middleware/auth.js";
+import * as ctrl from "./vaccinations.controller.js";
+const router = Router();
+router.use(authenticate);
+router.get("/catalogue",                    ctrl.catalogue);
+router.get("/patient/:patientId",           ctrl.history);
+router.post("/administer",                  ctrl.administer);
+router.get("/due-today",                    ctrl.dueToday);
+router.get("/defaulters",                   ctrl.defaulters);
+router.get("/reports/coverage",             ctrl.coverage);
+export default router;

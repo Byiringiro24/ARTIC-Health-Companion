@@ -1,14 +1,16 @@
 /**
- * ARTIC Health Companion — Backend Entry Point
- * Starts the Express server after running migrations and seeding demo data.
+ * ARTIC Health Companion — Backend Entry Point v2.0
+ * Next.js + React (frontend) + Node.js/Express (backend) + Socket.IO (real-time)
  */
 
 import "dotenv/config";
+import { createServer } from "node:http";
 import app from "./app.js";
 import { runMigrations } from "./database/migrate.js";
 import { seed } from "./database/seed.js";
 import { closeDb } from "./database/connection.js";
 import { config } from "./config/index.js";
+import { initSocket } from "./modules/realtime/socket.js";
 
 async function bootstrap() {
   // ── 1. Run database migrations (idempotent) ──────────────────────────────
@@ -20,21 +22,20 @@ async function bootstrap() {
     if (!e.message?.includes("UNIQUE")) console.warn("Seed warning:", e.message);
   }
 
-  // ── 3. Start HTTP server ──────────────────────────────────────────────────
-  const server = app.listen(config.port, () => {
+  // ── 3. Create HTTP server + Socket.IO ────────────────────────────────────
+  const httpServer = createServer(app);
+  initSocket(httpServer, config.cors.origin);
+
+  httpServer.listen(config.port, () => {
     console.log("");
     console.log("╔══════════════════════════════════════════════════════════════╗");
-    console.log("║  ARTIC Health Companion API — Phase 1+2+3                   ║");
-    console.log(`║  Running on http://localhost:${config.port}                         ║`);
-    console.log(`║  Environment: ${config.nodeEnv.padEnd(45)}║`);
+    console.log("║  ARTIC Health Companion — Full HMS v2.0                     ║");
+    console.log(`║  API:       http://localhost:${config.port}                         ║`);
+    console.log(`║  WebSocket: ws://localhost:${config.port}                           ║`);
+    console.log(`║  Env: ${config.nodeEnv.padEnd(54)}║`);
     console.log("╠══════════════════════════════════════════════════════════════╣");
-    console.log("║  Endpoints:                                                  ║");
-    console.log(`║    GET  http://localhost:${config.port}/health                        ║`);
-    console.log(`║    POST http://localhost:${config.port}/api/auth/login                ║`);
-    console.log(`║    GET  http://localhost:${config.port}/api/auth/me                   ║`);
-    console.log(`║    GET  http://localhost:${config.port}/api/patients                  ║`);
-    console.log(`║    GET  http://localhost:${config.port}/api/users                     ║`);
-    console.log(`║    GET  http://localhost:${config.port}/api/dashboard/kpis            ║`);
+    console.log("║  Stack: Next.js + React (frontend) | Node.js (backend)      ║");
+    console.log("║  DB: PostgreSQL 16 | Cache: Redis 7 | WS: Socket.IO         ║");
     console.log("╚══════════════════════════════════════════════════════════════╝");
     console.log("");
   });
@@ -42,7 +43,7 @@ async function bootstrap() {
   // ── 4. Graceful shutdown ──────────────────────────────────────────────────
   const shutdown = (signal) => {
     console.log(`\n${signal} received — shutting down gracefully…`);
-    server.close(() => {
+    httpServer.close(() => {
       closeDb();
       console.log("✅  Server closed");
       process.exit(0);

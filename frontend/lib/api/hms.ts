@@ -150,3 +150,50 @@ export const usersApi = {
   update:   (id: string, data: unknown)        => patch(`/api/users/${id}`, data),
   roles:    ()                                 => get("/api/users/roles"),
 };
+
+// ─── Inpatient ────────────────────────────────────────────────────────────────
+export const inpatientApi = {
+  getBeds:        (params?: Record<string,string>) => get(`/api/inpatient/beds?${new URLSearchParams(params)}`),
+  updateBed:      (id: string, status: string)     => patch(`/api/inpatient/beds/${id}/status`, { status }),
+  getAdmissions:  (params?: Record<string,string>) => get(`/api/inpatient/admissions?${new URLSearchParams(params)}`),
+  getAdmission:   (id: string)                     => get(`/api/inpatient/admissions/${id}`),
+  admit:          (data: unknown)                  => post("/api/inpatient/admit", data),
+  discharge:      (id: string, data: unknown)      => post(`/api/inpatient/admissions/${id}/discharge`, data),
+  transfer:       (id: string, newBedId: string)   => post(`/api/inpatient/admissions/${id}/transfer`, { newBedId }),
+  wardRound:      (data: unknown)                  => post("/api/inpatient/ward-round", data),
+};
+
+// ─── Nursing ──────────────────────────────────────────────────────────────────
+export const nursingApi = {
+  triage:        (data: unknown)      => post("/api/nursing/triage", data),
+  getTriageList: (params?: Record<string,string>) => get(`/api/nursing/triage?${new URLSearchParams(params)}`),
+  recordMAR:     (data: unknown)      => post("/api/nursing/mar", data),
+  getMAR:        (patientId: string)  => get(`/api/nursing/mar/${patientId}`),
+  handover:      (data: unknown)      => post("/api/nursing/handover", data),
+  getHandovers:  (params?: Record<string,string>) => get(`/api/nursing/handover?${new URLSearchParams(params)}`),
+  consent:       (data: unknown)      => post("/api/nursing/consent", data),
+};
+
+// ─── Registries ───────────────────────────────────────────────────────────────
+export const vaccinationApi = {
+  catalogue:  ()                                 => get("/api/registry/vaccinations/catalogue"),
+  history:    (patientId: string)                => get(`/api/registry/vaccinations/patient/${patientId}`),
+  administer: (data: unknown)                    => post("/api/registry/vaccinations/administer", data),
+  dueToday:   ()                                 => get("/api/registry/vaccinations/due-today"),
+  defaulters: (days?: number)                    => get(`/api/registry/vaccinations/defaulters${days ? `?days=${days}` : ""}`),
+  coverage:   (month?: string)                   => get(`/api/registry/vaccinations/reports/coverage${month ? `?month=${month}` : ""}`),
+};
+
+export const birthsApi = {
+  list:       (params?: Record<string,string>) => get(`/api/registry/births?${new URLSearchParams(params)}`),
+  getById:    (id: string)                     => get(`/api/registry/births/${id}`),
+  register:   (data: unknown)                  => post("/api/registry/births", data),
+  stats:      (month?: string)                 => get(`/api/registry/births/stats${month ? `?month=${month}` : ""}`),
+};
+
+export const deathsApi = {
+  list:       (params?: Record<string,string>) => get(`/api/registry/deaths?${new URLSearchParams(params)}`),
+  getById:    (id: string)                     => get(`/api/registry/deaths/${id}`),
+  register:   (data: unknown)                  => post("/api/registry/deaths", data),
+  stats:      (month?: string)                 => get(`/api/registry/deaths/stats${month ? `?month=${month}` : ""}`),
+};

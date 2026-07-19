@@ -1,11 +1,11 @@
+/**
+ * Dashboard route group layout.
+ * All sub-routes under (dashboard)/ deep-link into the main DashboardApp.
+ * The real application lives at /dashboard (DashboardApp).
+ */
 import type { ReactNode } from "react";
 
 export default function DashboardRouteLayout({ children }: { children: ReactNode }) {
-  return (
-    <main style={{ minHeight: "100vh", background: "#eef2ff", padding: "24px 16px" }}>
-      <div style={{ maxWidth: 1360, margin: "0 auto" }}>
-        {children}
-      </div>
-    </main>
-  );
+  // The actual app is at /dashboard — sub-routes are deep-link entry points.
+  return <>{children}</>;
 }

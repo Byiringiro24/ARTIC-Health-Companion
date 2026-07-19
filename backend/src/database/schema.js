@@ -658,4 +658,497 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notif_user   ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notif_status ON notifications(status);
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SPRINT 1 — INPATIENT, NURSING, HR, AMBULANCE, BLOOD BANK, MORTUARY,
+--            QUALITY, SURVEILLANCE, REGISTRIES
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- INPATIENT ────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS beds (
+  id              TEXT PRIMARY KEY,
+  tenant_id       TEXT NOT NULL REFERENCES tenants(id),
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  ward            TEXT NOT NULL,
+  room            TEXT,
+  bed_number      TEXT NOT NULL,
+  type            TEXT NOT NULL DEFAULT 'standard',
+  status          TEXT NOT NULL DEFAULT 'available',
+  is_active       INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(hospital_id, ward, bed_number)
+);
+CREATE INDEX IF NOT EXISTS idx_beds_hospital ON beds(hospital_id);
+CREATE INDEX IF NOT EXISTS idx_beds_status   ON beds(status);
+
+CREATE TABLE IF NOT EXISTS admissions (
+  id              TEXT PRIMARY KEY,
+  tenant_id       TEXT NOT NULL REFERENCES tenants(id),
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  patient_id      TEXT NOT NULL REFERENCES patients(id),
+  bed_id          TEXT REFERENCES beds(id),
+  doctor_id       TEXT NOT NULL REFERENCES users(id),
+  appointment_id  TEXT REFERENCES appointments(id),
+  admission_type  TEXT NOT NULL DEFAULT 'elective',
+  ward            TEXT,
+  admission_diagnosis TEXT,
+  admitting_notes TEXT,
+  status          TEXT NOT NULL DEFAULT 'active',
+  admitted_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  discharged_at   TEXT,
+  created_by      TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_admissions_patient ON admissions(patient_id);
+CREATE INDEX IF NOT EXISTS idx_admissions_status  ON admissions(status);
+
+CREATE TABLE IF NOT EXISTS discharge_summaries (
+  id              TEXT PRIMARY KEY,
+  admission_id    TEXT NOT NULL REFERENCES admissions(id),
+  patient_id      TEXT NOT NULL REFERENCES patients(id),
+  doctor_id       TEXT NOT NULL REFERENCES users(id),
+  admission_diagnosis   TEXT,
+  final_diagnosis       TEXT,
+  hospital_course       TEXT,
+  procedures_performed  TEXT,
+  medications_on_discharge TEXT,   -- JSON
+  follow_up_plan        TEXT,
+  follow_up_date        TEXT,
+  instructions          TEXT,
+  signed              INTEGER NOT NULL DEFAULT 0,
+  signed_at           TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS ward_rounds (
+  id              TEXT PRIMARY KEY,
+  admission_id    TEXT NOT NULL REFERENCES admissions(id),
+  patient_id      TEXT NOT NULL REFERENCES patients(id),
+  doctor_id       TEXT NOT NULL REFERENCES users(id),
+  vitals_id       TEXT REFERENCES vitals(id),
+  notes           TEXT,
+  plan            TEXT,
+  status_update   TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- NURSING ─────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS triage_assessments (
+  id              TEXT PRIMARY KEY,
+  patient_id      TEXT NOT NULL REFERENCES patients(id),
+  appointment_id  TEXT REFERENCES appointments(id),
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  nurse_id        TEXT NOT NULL REFERENCES users(id),
+  triage_level    INTEGER NOT NULL,   -- 1=Emergency 2=Urgent 3=Less Urgent 4=Non-Urgent 5=Minor
+  chief_complaint TEXT NOT NULL,
+  vitals_id       TEXT REFERENCES vitals(id),
+  allergies_noted TEXT,
+  notes           TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_triage_patient ON triage_assessments(patient_id);
+
+CREATE TABLE IF NOT EXISTS medication_administration (
+  id              TEXT PRIMARY KEY,
+  patient_id      TEXT NOT NULL REFERENCES patients(id),
+  admission_id    TEXT REFERENCES admissions(id),
+  prescription_id TEXT REFERENCES prescriptions(id),
+  nurse_id        TEXT NOT NULL REFERENCES users(id),
+  drug_name       TEXT NOT NULL,
+  dose            TEXT NOT NULL,
+  route           TEXT NOT NULL,
+  given_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  notes           TEXT,
+  omitted         INTEGER NOT NULL DEFAULT 0,
+  omit_reason     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_mar_patient ON medication_administration(patient_id);
+
+CREATE TABLE IF NOT EXISTS shift_handovers (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  ward            TEXT NOT NULL,
+  shift_date      TEXT NOT NULL,
+  shift_type      TEXT NOT NULL,   -- morning|afternoon|night
+  outgoing_nurse  TEXT NOT NULL REFERENCES users(id),
+  incoming_nurse  TEXT REFERENCES users(id),
+  patient_count   INTEGER,
+  notes           TEXT NOT NULL,
+  pending_tasks   TEXT,   -- JSON
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS patient_consents (
+  id              TEXT PRIMARY KEY,
+  patient_id      TEXT NOT NULL REFERENCES patients(id),
+  admission_id    TEXT REFERENCES admissions(id),
+  consent_type    TEXT NOT NULL,   -- surgical|anesthesia|blood|photography|research
+  consented       INTEGER NOT NULL DEFAULT 1,
+  signed_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  witness_id      TEXT REFERENCES users(id),
+  document_url    TEXT,
+  notes           TEXT
+);
+
+-- HUMAN RESOURCES ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS staff_attendance (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL REFERENCES users(id),
+  date        TEXT NOT NULL,
+  clock_in    TEXT,
+  clock_out   TEXT,
+  hours_worked REAL,
+  status      TEXT NOT NULL DEFAULT 'present',   -- present|absent|late|half-day|leave
+  notes       TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(user_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_attendance_user ON staff_attendance(user_id);
+
+CREATE TABLE IF NOT EXISTS leave_requests (
+  id            TEXT PRIMARY KEY,
+  user_id       TEXT NOT NULL REFERENCES users(id),
+  leave_type    TEXT NOT NULL,   -- annual|sick|maternity|paternity|compassionate|unpaid
+  start_date    TEXT NOT NULL,
+  end_date      TEXT NOT NULL,
+  days_count    INTEGER,
+  reason        TEXT,
+  status        TEXT NOT NULL DEFAULT 'pending',   -- pending|approved|rejected|cancelled
+  approved_by   TEXT REFERENCES users(id),
+  approved_at   TEXT,
+  rejection_reason TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS payroll_records (
+  id            TEXT PRIMARY KEY,
+  user_id       TEXT NOT NULL REFERENCES users(id),
+  hospital_id   TEXT NOT NULL REFERENCES hospitals(id),
+  month         TEXT NOT NULL,   -- YYYY-MM
+  basic_salary  REAL NOT NULL,
+  allowances    REAL NOT NULL DEFAULT 0,
+  deductions    REAL NOT NULL DEFAULT 0,
+  net_pay       REAL NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'pending',   -- pending|approved|paid
+  paid_at       TEXT,
+  created_by    TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(user_id, month)
+);
+
+CREATE TABLE IF NOT EXISTS staff_credentials (
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL REFERENCES users(id),
+  credential_type TEXT NOT NULL,   -- medical_license|nursing_license|pharmacist_license|etc
+  number          TEXT NOT NULL,
+  issuing_body    TEXT,
+  issued_at       TEXT,
+  expiry_date     TEXT,
+  document_url    TEXT,
+  status          TEXT NOT NULL DEFAULT 'active',
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- AMBULANCE ───────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS ambulances (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  vehicle_number  TEXT NOT NULL,
+  vehicle_type    TEXT NOT NULL DEFAULT 'basic',   -- basic|advanced|neonatal
+  driver_id       TEXT REFERENCES users(id),
+  status          TEXT NOT NULL DEFAULT 'available',   -- available|dispatched|maintenance|off_duty
+  last_location   TEXT,   -- JSON: lat, lng
+  fuel_level      INTEGER,
+  is_active       INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS dispatches (
+  id              TEXT PRIMARY KEY,
+  ambulance_id    TEXT NOT NULL REFERENCES ambulances(id),
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  patient_id      TEXT REFERENCES patients(id),
+  driver_id       TEXT NOT NULL REFERENCES users(id),
+  caller_name     TEXT,
+  caller_phone    TEXT,
+  pickup_location TEXT,
+  destination     TEXT,
+  chief_complaint TEXT,
+  priority        TEXT NOT NULL DEFAULT 'urgent',
+  status          TEXT NOT NULL DEFAULT 'dispatched',
+  dispatched_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  arrived_at      TEXT,
+  patient_loaded_at TEXT,
+  delivered_at    TEXT,
+  notes           TEXT,
+  created_by      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_dispatch_ambulance ON dispatches(ambulance_id);
+
+-- BLOOD BANK ──────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS blood_donors (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  name            TEXT NOT NULL,
+  national_id     TEXT,
+  blood_group     TEXT NOT NULL,
+  rh_factor       TEXT,
+  phone           TEXT,
+  last_donation   TEXT,
+  eligible_from   TEXT,
+  total_donations INTEGER NOT NULL DEFAULT 0,
+  is_active       INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS blood_units (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  blood_group     TEXT NOT NULL,
+  component       TEXT NOT NULL,   -- whole_blood|packed_rbc|platelets|ffp|cryo
+  units           INTEGER NOT NULL DEFAULT 1,
+  volume_ml       INTEGER,
+  batch_number    TEXT,
+  collected_at    TEXT NOT NULL,
+  expiry_date     TEXT NOT NULL,
+  donor_id        TEXT REFERENCES blood_donors(id),
+  status          TEXT NOT NULL DEFAULT 'available',   -- available|reserved|issued|expired|discarded
+  storage_unit    TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_blood_hospital ON blood_units(hospital_id);
+CREATE INDEX IF NOT EXISTS idx_blood_group    ON blood_units(blood_group);
+
+CREATE TABLE IF NOT EXISTS transfusions (
+  id              TEXT PRIMARY KEY,
+  patient_id      TEXT NOT NULL REFERENCES patients(id),
+  admission_id    TEXT REFERENCES admissions(id),
+  blood_unit_id   TEXT NOT NULL REFERENCES blood_units(id),
+  ordered_by      TEXT NOT NULL REFERENCES users(id),
+  administered_by TEXT REFERENCES users(id),
+  crossmatch_done INTEGER NOT NULL DEFAULT 0,
+  started_at      TEXT,
+  completed_at    TEXT,
+  reaction_noted  INTEGER NOT NULL DEFAULT 0,
+  reaction_details TEXT,
+  notes           TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- MORTUARY ────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS mortuary_records (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  patient_id      TEXT REFERENCES patients(id),
+  name            TEXT NOT NULL,
+  national_id     TEXT,
+  date_of_birth   TEXT,
+  date_of_death   TEXT NOT NULL,
+  time_of_death   TEXT,
+  cause_of_death  TEXT,
+  cause_icd_code  TEXT,
+  manner_of_death TEXT,   -- natural|accident|suicide|homicide|unknown
+  certifying_doctor TEXT REFERENCES users(id),
+  storage_unit    TEXT,
+  admitted_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  released_at     TEXT,
+  status          TEXT NOT NULL DEFAULT 'in_storage',   -- in_storage|released|transferred
+  notes           TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS death_certificates (
+  id              TEXT PRIMARY KEY,
+  mortuary_id     TEXT NOT NULL REFERENCES mortuary_records(id),
+  certificate_number TEXT UNIQUE NOT NULL,
+  primary_cause   TEXT NOT NULL,
+  contributing_cause TEXT,
+  icd_code        TEXT,
+  doctor_id       TEXT NOT NULL REFERENCES users(id),
+  issued_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  nida_submitted  INTEGER NOT NULL DEFAULT 0,
+  nida_ref        TEXT,
+  burial_permit   TEXT
+);
+
+-- QUALITY ─────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS clinical_audits (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  title           TEXT NOT NULL,
+  audit_type      TEXT NOT NULL,
+  standard        TEXT,
+  audit_date      TEXT NOT NULL,
+  auditor_id      TEXT NOT NULL REFERENCES users(id),
+  findings        TEXT,
+  score           INTEGER,
+  recommendations TEXT,
+  status          TEXT NOT NULL DEFAULT 'open',   -- open|closed|in_progress
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS safety_incidents (
+  id              TEXT PRIMARY KEY,
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  patient_id      TEXT REFERENCES patients(id),
+  incident_type   TEXT NOT NULL,   -- medication_error|fall|infection|near_miss|equipment_failure|other
+  severity        TEXT NOT NULL,   -- near_miss|minor|moderate|major|catastrophic
+  description     TEXT NOT NULL,
+  immediate_action TEXT,
+  reported_by     TEXT NOT NULL REFERENCES users(id),
+  occurred_at     TEXT NOT NULL,
+  reported_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  investigation_notes TEXT,
+  status          TEXT NOT NULL DEFAULT 'open',
+  corrective_actions TEXT   -- JSON array
+);
+
+-- VACCINATION ─────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS vaccine_catalogue (
+  id                  TEXT PRIMARY KEY,
+  name                TEXT NOT NULL,
+  antigen             TEXT NOT NULL,
+  doses_required      INTEGER NOT NULL DEFAULT 1,
+  schedule_weeks      TEXT,   -- JSON array of week numbers e.g. [6,10,14]
+  min_interval_days   INTEGER NOT NULL DEFAULT 28,
+  storage_temp_min    REAL,
+  storage_temp_max    REAL,
+  is_active           INTEGER NOT NULL DEFAULT 1,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS immunization_records (
+  id              TEXT PRIMARY KEY,
+  patient_id      TEXT NOT NULL REFERENCES patients(id),
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  vaccine_id      TEXT NOT NULL REFERENCES vaccine_catalogue(id),
+  dose_number     INTEGER NOT NULL DEFAULT 1,
+  batch_number    TEXT,
+  manufacturer    TEXT,
+  administered_at TEXT NOT NULL DEFAULT (datetime('now')),
+  administered_by TEXT NOT NULL REFERENCES users(id),
+  site            TEXT,   -- left_arm|right_arm|left_thigh|right_thigh|oral
+  route           TEXT,   -- IM|SC|oral|ID
+  next_dose_due   TEXT,
+  aefi_noted      INTEGER NOT NULL DEFAULT 0,
+  aefi_details    TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_imm_patient ON immunization_records(patient_id);
+CREATE INDEX IF NOT EXISTS idx_imm_vaccine ON immunization_records(vaccine_id);
+
+-- BIRTH REGISTRATION ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS birth_registrations (
+  id                  TEXT PRIMARY KEY,
+  hospital_id         TEXT NOT NULL REFERENCES hospitals(id),
+  mother_patient_id   TEXT REFERENCES patients(id),
+  newborn_patient_id  TEXT REFERENCES patients(id),
+  birth_date          TEXT NOT NULL,
+  birth_time          TEXT,
+  delivery_mode       TEXT NOT NULL DEFAULT 'normal',   -- normal|cesarean|assisted
+  gestational_weeks   INTEGER,
+  birth_weight_grams  INTEGER,
+  birth_length_cm     REAL,
+  apgar_1min          INTEGER,
+  apgar_5min          INTEGER,
+  birth_outcome       TEXT NOT NULL DEFAULT 'live_birth',   -- live_birth|stillbirth|neonatal_death
+  sex                 TEXT NOT NULL,
+  multiple_birth      INTEGER NOT NULL DEFAULT 0,
+  birth_order         INTEGER,
+  complications       TEXT,
+  attendant_id        TEXT REFERENCES users(id),
+  certificate_number  TEXT UNIQUE,
+  crvs_reference      TEXT,
+  crvs_submitted_at   TEXT,
+  issued_at           TEXT,
+  created_by          TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- ANC REGISTER ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pregnancies (
+  id                  TEXT PRIMARY KEY,
+  patient_id          TEXT NOT NULL REFERENCES patients(id),
+  hospital_id         TEXT NOT NULL REFERENCES hospitals(id),
+  lmp_date            TEXT,
+  edd                 TEXT,
+  gestational_weeks   INTEGER,
+  gravida             INTEGER NOT NULL DEFAULT 1,
+  para                INTEGER NOT NULL DEFAULT 0,
+  risk_level          TEXT NOT NULL DEFAULT 'low',   -- low|medium|high
+  hiv_status          TEXT,
+  syphilis_status     TEXT,
+  blood_group         TEXT,
+  rhesus              TEXT,
+  delivery_plan       TEXT,
+  outcome             TEXT,   -- delivered|miscarriage|stillbirth|ectopic|ongoing
+  birth_id            TEXT REFERENCES birth_registrations(id),
+  registered_at       TEXT NOT NULL DEFAULT (datetime('now')),
+  registered_by       TEXT REFERENCES users(id),
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_pregnancy_patient ON pregnancies(patient_id);
+
+CREATE TABLE IF NOT EXISTS anc_visits (
+  id                  TEXT PRIMARY KEY,
+  pregnancy_id        TEXT NOT NULL REFERENCES pregnancies(id),
+  visit_number        INTEGER NOT NULL,
+  visit_date          TEXT NOT NULL,
+  gestational_weeks   INTEGER,
+  weight_kg           REAL,
+  bp_systolic         INTEGER,
+  bp_diastolic        INTEGER,
+  fundal_height       REAL,
+  fetal_position      TEXT,
+  fetal_heart_rate    INTEGER,
+  urine_protein       TEXT,
+  urine_glucose       TEXT,
+  hemoglobin          REAL,
+  tetanus_given       INTEGER NOT NULL DEFAULT 0,
+  iron_folic_given    INTEGER NOT NULL DEFAULT 0,
+  itn_given           INTEGER NOT NULL DEFAULT 0,
+  counselling_topics  TEXT,   -- JSON array
+  next_visit_date     TEXT,
+  provider_id         TEXT NOT NULL REFERENCES users(id),
+  notes               TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- FAMILY PLANNING ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS family_planning_clients (
+  id              TEXT PRIMARY KEY,
+  patient_id      TEXT NOT NULL REFERENCES patients(id),
+  hospital_id     TEXT NOT NULL REFERENCES hospitals(id),
+  enrollment_date TEXT NOT NULL,
+  current_method  TEXT,   -- pill|injection|iud|implant|condom|sterilization|nfp|none
+  method_start    TEXT,
+  children_count  INTEGER,
+  reason_for_fp   TEXT,
+  status          TEXT NOT NULL DEFAULT 'active',
+  counselled_by   TEXT REFERENCES users(id),
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS fp_visits (
+  id              TEXT PRIMARY KEY,
+  client_id       TEXT NOT NULL REFERENCES family_planning_clients(id),
+  visit_date      TEXT NOT NULL,
+  method_given    TEXT,
+  quantity        INTEGER,
+  bp_systolic     INTEGER,
+  bp_diastolic    INTEGER,
+  weight_kg       REAL,
+  side_effects    TEXT,
+  next_visit      TEXT,
+  provider_id     TEXT NOT NULL REFERENCES users(id),
+  notes           TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;

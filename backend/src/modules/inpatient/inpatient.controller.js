@@ -1,0 +1,11 @@
+import { asyncHandler } from "../../middleware/errorHandler.js";
+import * as svc from "./inpatient.service.js";
+const t=r=>r.user?.tenantId||"tenant-001",h=r=>r.user?.hospitalId||"hosp-001";
+export const getBeds       = asyncHandler(async(req,res)=>res.json(await svc.getBeds({...req.query,hospitalId:h(req)})));
+export const updateBed     = asyncHandler(async(req,res)=>res.json(await svc.updateBedStatus(req.params.id,req.body.status,req.user?.id)));
+export const getAdmissions = asyncHandler(async(req,res)=>res.json(await svc.getAdmissions({...req.query,hospitalId:h(req)})));
+export const getAdmission  = asyncHandler(async(req,res)=>res.json(await svc.getAdmissionById(req.params.id)));
+export const admit         = asyncHandler(async(req,res)=>res.status(201).json(await svc.admitPatient(req.body,req.user?.id,t(req),h(req))));
+export const discharge     = asyncHandler(async(req,res)=>res.json(await svc.dischargePatient(req.params.id,req.body,req.user?.id)));
+export const transfer      = asyncHandler(async(req,res)=>res.json(await svc.transferPatient(req.params.id,req.body.newBedId,req.user?.id)));
+export const wardRound     = asyncHandler(async(req,res)=>res.status(201).json(await svc.addWardRound(req.body,req.user?.id)));

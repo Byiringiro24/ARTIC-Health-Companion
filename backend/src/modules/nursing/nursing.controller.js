@@ -1,0 +1,10 @@
+import { asyncHandler } from "../../middleware/errorHandler.js";
+import * as svc from "./nursing.service.js";
+const h=r=>r.user?.hospitalId||"hosp-001";
+export const triage        = asyncHandler(async(req,res)=>res.status(201).json(await svc.triagePatient({...req.body,hospitalId:h(req)},req.user?.id)));
+export const getTriageList = asyncHandler(async(req,res)=>res.json(await svc.getTriageList({...req.query,hospitalId:h(req)})));
+export const recordMAR     = asyncHandler(async(req,res)=>res.status(201).json(await svc.recordMedication(req.body,req.user?.id)));
+export const getMAR        = asyncHandler(async(req,res)=>res.json(await svc.getPatientMAR(req.params.patientId)));
+export const handover      = asyncHandler(async(req,res)=>res.status(201).json(await svc.createHandover({...req.body,hospitalId:h(req)},req.user?.id)));
+export const getHandovers  = asyncHandler(async(req,res)=>res.json(await svc.getHandovers({...req.query,hospitalId:h(req)})));
+export const consent       = asyncHandler(async(req,res)=>res.status(201).json(await svc.recordConsent(req.body,req.user?.id)));

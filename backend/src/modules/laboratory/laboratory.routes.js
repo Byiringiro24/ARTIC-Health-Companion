@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { authenticate } from "../../middleware/auth.js";
+import { authenticate, requireModule } from "../../middleware/auth.js";
 import * as ctrl from "./laboratory.controller.js";
 
 const router = Router();
 router.use(authenticate);
+router.use(requireModule("laboratory"));
 router.get("/",                   ctrl.list);
 router.get("/:id",                ctrl.getOne);
 router.post("/",                  ctrl.create);

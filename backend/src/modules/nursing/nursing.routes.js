@@ -1,0 +1,14 @@
+import { Router } from "express";
+import { authenticate, requireModule } from "../../middleware/auth.js";
+import * as ctrl from "./nursing.controller.js";
+const router = Router();
+router.use(authenticate);
+router.use(requireModule("nursing"));
+router.post("/triage",                   ctrl.triage);
+router.get("/triage",                    ctrl.getTriageList);
+router.post("/mar",                      ctrl.recordMAR);
+router.get("/mar/:patientId",            ctrl.getMAR);
+router.post("/handover",                 ctrl.handover);
+router.get("/handover",                  ctrl.getHandovers);
+router.post("/consent",                  ctrl.consent);
+export default router;
