@@ -32,6 +32,8 @@ pm2 save
 echo "6. Building and starting frontend..."
 cd /home/artic/artic-hms/frontend
 npm install --silent
+# .env.production already contains NEXT_PUBLIC_API_URL=http://172.209.217.176:4001
+# but we pass it explicitly here too in case the file is missing
 NEXT_PUBLIC_API_URL=http://172.209.217.176:4001 npm run build
 pm2 delete artic-hms-frontend 2>/dev/null || true
 pm2 start npm --name artic-hms-frontend -- start -- -p 3001
