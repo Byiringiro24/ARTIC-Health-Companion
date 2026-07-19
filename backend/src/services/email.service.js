@@ -27,27 +27,35 @@ export function generateSecurePassword(length = 12) {
 }
 
 async function getTransporter() {
-  if (_transporter) return _transporter;
+  // Don't cache a broken/missing-credentials transporter — re-check each time
+  // until we successfully connect, then cache it
+  if (_transporter && _transporter._verified) return _transporter;
 
-  // Use real SMTP if credentials are configured (any environment)
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  // Use real SMTP if all three credentials are set
+  if (host && user && pass) {
     try {
-      _transporter = nodemailer.createTransport({
-        host:   process.env.SMTP_HOST,
+      const t = nodemailer.createTransport({
+        host,
         port:   parseInt(process.env.SMTP_PORT || "587"),
         secure: process.env.SMTP_SECURE === "true",
-        auth:   { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        auth:   { user, pass },
         tls:    { rejectUnauthorized: false },
         pool:   true,
         maxConnections: 5,
       });
-      // Verify connection on first use
-      await _transporter.verify();
-      console.log(`✅ Email service ready — ${process.env.SMTP_HOST}`);
+      await t.verify();
+      t._verified = true;
+      _transporter = t;
+      console.log(`✅ Email service ready — ${host} (${user})`);
+      return _transporter;
     } catch (err) {
-      console.warn(`⚠️  Email SMTP verification failed (${process.env.SMTP_HOST}): ${err.message}`);
-      console.warn("   Emails will be logged to console until SMTP is fixed.");
-      _transporter = null; // reset so we fallback below
+      console.warn(`⚠️  Email SMTP connect failed (${host}): ${err.message}`);
+      console.warn("   Falling back to console logging.");
+      _transporter = null; // allow retry next call
     }
   }
 
