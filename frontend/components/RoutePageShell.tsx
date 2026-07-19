@@ -76,9 +76,10 @@ function getRouteContext(pathname: string) {
   };
 }
 
-export function RoutePageShell() {
+export function RoutePageShell({ title: forcedTitle }: { title?: string } = {}) {
   const pathname = usePathname();
-  const { title, description, highlights } = getRouteContext(pathname);
+  const { title: autoTitle, description, highlights } = getRouteContext(pathname);
+  const title = forcedTitle || autoTitle;
 
   return (
     <main style={{ minHeight: "calc(100vh - 120px)", padding: "32px 24px" }}>

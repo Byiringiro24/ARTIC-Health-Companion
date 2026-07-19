@@ -41,7 +41,7 @@ export default function TriagePage() {
   );
 
   useEffect(() => {
-    nursingApi.getTriageList({}).then(setTodayTriages).catch(() => {});
+    nursingApi.getTriageList({}).then((r: any) => setTodayTriages(Array.isArray(r) ? r : [])).catch(() => {});
   }, []);
 
   async function submitTriage() {
