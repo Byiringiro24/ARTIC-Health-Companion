@@ -3,9 +3,7 @@
  * Next.js + React (frontend) + Node.js/Express (backend) + Socket.IO (real-time)
  */
 
-import { config as dotenvConfig } from "dotenv";
-// Load .env only as fallback — --env-file flag takes priority
-dotenvConfig({ override: false });
+import "dotenv/config";
 import { createServer } from "node:http";
 import app from "./app.js";
 import { runMigrations } from "./database/migrate.js";
@@ -16,9 +14,6 @@ import { initSocket } from "./modules/realtime/socket.js";
 import { seedFeatureFlags } from "./modules/super-admin/super-admin.service.js";
 
 async function bootstrap() {
-  // Log key env vars on startup to confirm they loaded
-  console.log(`🔧 ENV: SMTP_HOST=${process.env.SMTP_HOST||"NOT SET"} SMTP_USER=${process.env.SMTP_USER||"NOT SET"} OPENAI=${process.env.OPENAI_API_KEY?"SET":"NOT SET"}`);
-
   // ── 1. Run database migrations (idempotent) ──────────────────────────────
   await runMigrations();
 

@@ -25,8 +25,11 @@ cd /home/artic/artic-hms/backend && npm install --omit=dev --silent
 
 echo "5. Restarting backend..."
 pm2 delete artic-hms-backend 2>/dev/null || true
-pm2 start src/index.js --name artic-hms-backend \
-  --node-args="--env-file=/home/artic/artic-hms/backend/.env"
+# Source the .env file so PM2 inherits all environment variables
+set -a
+source /home/artic/artic-hms/backend/.env
+set +a
+pm2 start src/index.js --name artic-hms-backend
 pm2 save
 
 echo "6. Building and starting frontend..."
