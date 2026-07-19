@@ -226,20 +226,35 @@ export async function createSubscriptionInvoice(hospitalId, amount, createdBy, o
 // ── System Stats ──────────────────────────────────────────────────────────────
 export async function getSystemStats() {
   const db = getDb();
-  const [hospitals, users, patients, pendingRequests, activeFeatures] = await Promise.all([
+
+  // PRIVACY: Only aggregated counts — NO individual patient data
+  const [hospitals, users, patientCount, pendingRequests, activeFeatures] = await Promise.all([
     db.prepare(`SELECT COUNT(*) as n FROM hospitals WHERE deleted_at IS NULL`).get(),
     db.prepare(`SELECT COUNT(*) as n FROM users WHERE deleted_at IS NULL AND is_active=1`).get(),
+    // Patient count is aggregated — no names, no NID, no clinical data
     db.prepare(`SELECT COUNT(*) as n FROM patients WHERE deleted_at IS NULL`).get(),
     db.prepare(`SELECT COUNT(*) as n FROM feature_access_requests WHERE status='pending'`).get(),
     db.prepare(`SELECT COUNT(*) as n FROM feature_flags WHERE default_status='active' AND is_active=1`).get(),
   ]);
+
   const tierCounts = await db.prepare(`SELECT tier, COUNT(*) as count FROM subscriptions GROUP BY tier`).all();
+
+  // Technical KPIs only (no patient clinical data)
+  const todayAppts = await db.prepare(`SELECT COUNT(*) as n FROM appointments WHERE appointment_date=CURRENT_DATE`).get();
+  const todayLabs  = await db.prepare(`SELECT COUNT(*) as n FROM lab_requests WHERE date(ordered_at)=CURRENT_DATE`).get();
+
   return {
-    totalHospitals: hospitals?.n || 0,
-    activeUsers: users?.n || 0,
-    totalPatients: patients?.n || 0,
-    pendingRequests: pendingRequests?.n || 0,
-    activeFeatures: activeFeatures?.n || 0,
-    hospitalsByTier: tierCounts,
+    // System health
+    totalHospitals:   hospitals?.n  || 0,
+    activeUsers:      users?.n      || 0,
+    // Aggregated counts only — NO individual patient data per Rwanda DPL
+    totalPatients:    patientCount?.n || 0,
+    pendingRequests:  pendingRequests?.n || 0,
+    activeFeatures:   activeFeatures?.n || 0,
+    hospitalsByTier:  tierCounts,
+    // Technical stats (aggregated, non-identifiable)
+    todayAppointments: todayAppts?.n || 0,
+    todayLabTests:     todayLabs?.n  || 0,
+    privacyNote: "All patient counts are aggregated. Individual patient data is not accessible to Super Admin per Rwanda Data Protection Law (2021).",
   };
 }

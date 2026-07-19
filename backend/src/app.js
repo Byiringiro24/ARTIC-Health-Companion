@@ -15,6 +15,7 @@ import { config }          from "./config/index.js";
 import { getDb }           from "./database/connection.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { globalLimiter }   from "./middleware/rateLimiter.js";
+import { clinicalPrivacyGuard } from "./middleware/privacyGuard.js";
 
 // ── Route modules ─────────────────────────────────────────────────────────────
 import authRoutes           from "./modules/auth/auth.routes.js";
@@ -83,6 +84,9 @@ app.get("/health", async (_req, res) => {
 });
 
 // ── API routes ────────────────────────────────────────────────────────────────
+// Privacy guard: Super Admin cannot see individual clinical data
+app.use("/api", clinicalPrivacyGuard);
+
 app.use("/api/auth",            authRoutes);
 app.use("/api/users",           usersRoutes);
 app.use("/api/patients",        patientsRoutes);
