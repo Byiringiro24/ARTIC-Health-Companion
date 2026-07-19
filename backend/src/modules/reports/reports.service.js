@@ -1,5 +1,6 @@
 /**
  * Reports Service — KPIs, MOH summary, revenue, clinical stats.
+ * All queries use PostgreSQL syntax (CURRENT_DATE, INTERVAL, TO_CHAR, EXTRACT).
  */
 import { getDb } from "../../database/connection.js";
 
@@ -9,25 +10,26 @@ export async function getLiveKPIs(hospitalId) {
   const db = getDb(); const hid = hospitalId || H;
   const today = new Date().toISOString().slice(0, 10);
 
-  const [queueCount, bedRow, revenueRow, criticalRow, pendingLabRow] = await Promise.all([
+  const [queueCount, revenueRow, criticalRow, pendingLabRow] = await Promise.all([
     db.prepare(`SELECT COUNT(*) as n FROM appointments WHERE hospital_id=? AND appointment_date=? AND status IN ('checked-in','in-progress')`).get(hid, today),
-    db.prepare(`SELECT COUNT(*) as total, 0 as occupied FROM inventory_items WHERE hospital_id=? AND category='Bed' AND is_active=1`).get(hid),
-    db.prepare(`SELECT COALESCE(SUM(paid),0) as revenue FROM invoices WHERE hospital_id=? AND date(created_at)=?`).get(hid, today),
+    db.prepare(`SELECT COALESCE(SUM(paid),0) as revenue FROM invoices WHERE hospital_id=? AND created_at::date = ?::date`).get(hid, today),
     db.prepare(`SELECT COUNT(*) as n FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hospital_id=?) AND type='danger' AND read_at IS NULL`).get(hid),
     db.prepare(`SELECT COUNT(*) as n FROM lab_requests WHERE hospital_id=? AND status IN ('ordered','collected','received')`).get(hid),
   ]);
 
-  // Avg wait time from checked-in appointments today
+  // Avg wait time from checked-in appointments today (PostgreSQL EXTRACT)
   const waitRow = await db.prepare(`
-    SELECT AVG((strftime('%s','now') - strftime('%s',check_in_time))/60) as avg_wait
-    FROM appointments WHERE hospital_id=? AND appointment_date=? AND check_in_time IS NOT NULL AND status='checked-in'
+    SELECT AVG(EXTRACT(EPOCH FROM (NOW() - check_in_time::timestamp)) / 60) as avg_wait
+    FROM appointments
+    WHERE hospital_id=? AND appointment_date=? AND check_in_time IS NOT NULL AND status='checked-in'
   `).get(hid, today);
 
-  // Claims approval rate (last 30 days)
+  // Claims approval rate (last 30 days) — PostgreSQL interval
   const claimsRow = await db.prepare(`
     SELECT COUNT(*) as total,
            SUM(CASE WHEN status IN ('approved','paid') THEN 1 ELSE 0 END) as approved
-    FROM insurance_claims WHERE hospital_id=? AND created_at >= date('now','-30 days')
+    FROM insurance_claims
+    WHERE hospital_id=? AND created_at >= CURRENT_DATE - INTERVAL '30 days'
   `).get(hid);
   const claimRate = claimsRow?.total > 0
     ? Math.round((claimsRow.approved / claimsRow.total) * 100)
@@ -47,19 +49,19 @@ export async function getRevenueByDepartment(hospitalId, days = 30) {
     SELECT ii.category as department, SUM(ii.total) as revenue
     FROM invoice_items ii
     JOIN invoices i ON i.id = ii.invoice_id
-    WHERE i.hospital_id=? AND i.created_at >= date('now','-${parseInt(days)} days')
+    WHERE i.hospital_id=? AND i.created_at >= CURRENT_DATE - INTERVAL '${parseInt(days)} days'
     GROUP BY ii.category ORDER BY revenue DESC
   `).all(hospitalId || H);
 }
 
 export async function getWeeklyRevenue(hospitalId) {
   const db = getDb();
-  const rows = await db.prepare(`
-    SELECT date(created_at) as day, SUM(paid) as revenue
-    FROM invoices WHERE hospital_id=? AND created_at >= date('now','-7 days')
-    GROUP BY date(created_at) ORDER BY day ASC
+  return db.prepare(`
+    SELECT created_at::date as day, SUM(paid) as revenue
+    FROM invoices
+    WHERE hospital_id=? AND created_at >= CURRENT_DATE - INTERVAL '7 days'
+    GROUP BY created_at::date ORDER BY day ASC
   `).all(hospitalId || H);
-  return rows;
 }
 
 export async function getMOHSummary(hospitalId, month) {
@@ -67,20 +69,20 @@ export async function getMOHSummary(hospitalId, month) {
   const m = month || new Date().toISOString().slice(0, 7); // YYYY-MM
 
   const [totalPatients, newPatients, totalAppointments, labTests, totalRevenue] = await Promise.all([
-    db.prepare(`SELECT COUNT(DISTINCT patient_id) as n FROM appointments WHERE hospital_id=? AND strftime('%Y-%m',appointment_date)=? AND status='completed'`).get(hid, m),
-    db.prepare(`SELECT COUNT(*) as n FROM patients WHERE hospital_id=? AND strftime('%Y-%m',created_at)=?`).get(hid, m),
-    db.prepare(`SELECT COUNT(*) as n FROM appointments WHERE hospital_id=? AND strftime('%Y-%m',appointment_date)=?`).get(hid, m),
-    db.prepare(`SELECT COUNT(*) as n FROM lab_requests WHERE hospital_id=? AND strftime('%Y-%m',ordered_at)=?`).get(hid, m),
-    db.prepare(`SELECT COALESCE(SUM(paid),0) as total FROM invoices WHERE hospital_id=? AND strftime('%Y-%m',created_at)=?`).get(hid, m),
+    db.prepare(`SELECT COUNT(DISTINCT patient_id) as n FROM appointments WHERE hospital_id=? AND TO_CHAR(appointment_date::date,'YYYY-MM')=? AND status='completed'`).get(hid, m),
+    db.prepare(`SELECT COUNT(*) as n FROM patients WHERE hospital_id=? AND TO_CHAR(created_at,'YYYY-MM')=?`).get(hid, m),
+    db.prepare(`SELECT COUNT(*) as n FROM appointments WHERE hospital_id=? AND TO_CHAR(appointment_date::date,'YYYY-MM')=?`).get(hid, m),
+    db.prepare(`SELECT COUNT(*) as n FROM lab_requests WHERE hospital_id=? AND TO_CHAR(ordered_at,'YYYY-MM')=?`).get(hid, m),
+    db.prepare(`SELECT COALESCE(SUM(paid),0) as total FROM invoices WHERE hospital_id=? AND TO_CHAR(created_at,'YYYY-MM')=?`).get(hid, m),
   ]);
 
   return {
     month: m,
-    totalPatientsServed:    totalPatients?.n  || 0,
-    newPatientRegistrations:newPatients?.n    || 0,
-    totalAppointments:      totalAppointments?.n || 0,
-    labTestsPerformed:      labTests?.n       || 0,
-    totalRevenue:           totalRevenue?.total || 0,
+    totalPatientsServed:     totalPatients?.n   || 0,
+    newPatientRegistrations: newPatients?.n     || 0,
+    totalAppointments:       totalAppointments?.n || 0,
+    labTestsPerformed:       labTests?.n        || 0,
+    totalRevenue:            totalRevenue?.total || 0,
   };
 }
 
