@@ -1,38 +1,85 @@
 /**
  * Email Service — Nodemailer
- * Falls back to Ethereal (test SMTP) in development.
+ * Sends real emails when SMTP_HOST + SMTP_USER + SMTP_PASS are configured.
+ * Falls back to console logging when credentials are not set (dev mode).
+ *
+ * Supports: Gmail, Outlook, SendGrid, AWS SES, Mailgun, any SMTP server.
+ * See docs/EMAIL-SETUP.md for full configuration guide.
  */
 
 import nodemailer from "nodemailer";
 
 let _transporter = null;
 
+// Generate a secure random password
+export function generateSecurePassword(length = 12) {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghjkmnpqrstuvwxyz";
+  const digits = "23456789";
+  const special = "!@#$%^&*";
+  const all = upper + lower + digits + special;
+  let pw = upper[Math.floor(Math.random()*upper.length)]
+         + lower[Math.floor(Math.random()*lower.length)]
+         + digits[Math.floor(Math.random()*digits.length)]
+         + special[Math.floor(Math.random()*special.length)];
+  for (let i = 4; i < length; i++) pw += all[Math.floor(Math.random()*all.length)];
+  return pw.split("").sort(()=>Math.random()-0.5).join("");
+}
+
 async function getTransporter() {
   if (_transporter) return _transporter;
 
-  if (process.env.NODE_ENV === "production" && process.env.SMTP_HOST) {
-    _transporter = nodemailer.createTransport({
-      host:   process.env.SMTP_HOST,
-      port:   parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_SECURE === "true",
-      auth:   { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    });
-  } else {
-    // Dev: log emails to console, don't actually send
-    _transporter = { sendMail: async (opts) => {
-      console.log(`📧 EMAIL (dev) → ${opts.to}\n   Subject: ${opts.subject}`);
-      return { messageId: `dev-${Date.now()}` };
-    }};
+  // Use real SMTP if credentials are configured (any environment)
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
+      _transporter = nodemailer.createTransport({
+        host:   process.env.SMTP_HOST,
+        port:   parseInt(process.env.SMTP_PORT || "587"),
+        secure: process.env.SMTP_SECURE === "true",
+        auth:   { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        tls:    { rejectUnauthorized: false },
+        pool:   true,
+        maxConnections: 5,
+      });
+      // Verify connection on first use
+      await _transporter.verify();
+      console.log(`✅ Email service ready — ${process.env.SMTP_HOST}`);
+    } catch (err) {
+      console.warn(`⚠️  Email SMTP verification failed (${process.env.SMTP_HOST}): ${err.message}`);
+      console.warn("   Emails will be logged to console until SMTP is fixed.");
+      _transporter = null; // reset so we fallback below
+    }
   }
+
+  // Fallback: log to console (no real send)
+  if (!_transporter) {
+    _transporter = {
+      sendMail: async (opts) => {
+        console.log("📧 ─────────────────────────────────────────────");
+        console.log(`📧 EMAIL (dev/no-smtp) → ${opts.to}`);
+        console.log(`   Subject: ${opts.subject}`);
+        if (opts.text) console.log(`   Body: ${opts.text.slice(0,200)}…`);
+        console.log("📧 ─────────────────────────────────────────────");
+        return { messageId: `dev-${Date.now()}` };
+      },
+    };
+  }
+
   return _transporter;
 }
 
-const FROM = process.env.EMAIL_FROM || '"ARTIC Health Companion" <noreply@artic.health>';
+const FROM = process.env.EMAIL_FROM
+  || `"${process.env.EMAIL_FROM_NAME||"ARTIC Health Companion"}" <${process.env.EMAIL_FROM_ADDRESS||"noreply@artic.health"}>`;
 
 export async function sendEmail({ to, subject, html, text }) {
   try {
     const t = await getTransporter();
-    const info = await t.sendMail({ from: FROM, to, subject, html, text });
+    const info = await t.sendMail({
+      from: FROM, to, subject,
+      html,
+      text: text || html?.replace(/<[^>]*>/g, ""),
+      headers: { "X-Mailer": "ARTIC Health Companion" },
+    });
     return { sent: true, messageId: info.messageId };
   } catch (err) {
     console.error("Email send failed:", err.message);
@@ -77,18 +124,40 @@ export function emailPasswordReset({ name, resetLink, expiresIn }) {
 
 export function emailWelcome({ name, email, role, tempPassword, loginUrl }) {
   return {
-    subject: "Welcome to ARTIC Health Companion",
-    html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#027c8e">Welcome to ARTIC Health Companion</h2>
-      <p>Dear <strong>${name}</strong>,</p>
-      <p>Your account has been created with the role: <strong>${role}</strong></p>
-      <table style="border-collapse:collapse;width:100%">
-        <tr><td style="padding:8px;border:1px solid #e5e7eb"><strong>Email</strong></td><td style="padding:8px;border:1px solid #e5e7eb">${email}</td></tr>
-        <tr><td style="padding:8px;border:1px solid #e5e7eb"><strong>Temp Password</strong></td><td style="padding:8px;border:1px solid #e5e7eb">${tempPassword}</td></tr>
-      </table>
-      <p><a href="${loginUrl}" style="background:#027c8e;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block">Login Now</a></p>
-      <p>Please change your password after first login.</p>
+    subject: `Your ARTIC HMS Account — Login Credentials`,
+    html: `<div style="font-family:sans-serif;max-width:620px;margin:0 auto;background:#f8fafc;padding:20px">
+      <div style="background:linear-gradient(135deg,#0891b2,#7c3aed);padding:20px;border-radius:12px;text-align:center;margin-bottom:16px">
+        <h1 style="color:white;margin:0;font-size:20px">🏥 ARTIC Health Companion</h1>
+      </div>
+      <div style="background:white;padding:22px;border-radius:12px;border:1px solid #e2e8f0">
+        <h2 style="color:#0f172a;margin:0 0 12px">Hello, <strong>${name}</strong> 👋</h2>
+        <p style="color:#374151;line-height:1.6">Your account has been created on <strong>ARTIC Health Companion</strong> with role: <strong>${role}</strong></p>
+
+        <div style="background:#f8fafc;border:2px solid #0891b2;border-radius:10px;padding:16px;margin:16px 0">
+          <div style="fontWeight:700;color:#0891b2;marginBottom:10px;font-size:13px">🔑 YOUR LOGIN CREDENTIALS</div>
+          <table style="width:100%;border-collapse:collapse">
+            <tr><td style="padding:6px 0;color:#64748b;font-size:13px">Email</td><td style="padding:6px 0;font-weight:700;color:#0f172a">${email}</td></tr>
+            <tr><td style="padding:6px 0;color:#64748b;font-size:13px">Auto-Password</td><td style="padding:6px 0;font-weight:800;color:#d97706;font-family:monospace;font-size:15px">${tempPassword}</td></tr>
+          </table>
+        </div>
+
+        <div style="background:#fff7ed;border:1px solid #fde68a;border-radius:8px;padding:12px;margin:12px 0;font-size:13px;color:#92400e">
+          ⚠️ <strong>Security Notice:</strong> This auto-generated password is temporary. You can use it to log in OR set your own password — your choice.
+        </div>
+
+        <div style="display:flex;gap:10px;margin:16px 0">
+          <a href="${loginUrl}/login" style="display:inline-block;background:#0891b2;color:white;padding:10px 20px;text-decoration:none;border-radius:8px;font-weight:700;font-size:13px">🔐 Login with Auto-Password</a>
+        </div>
+
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;font-size:12px;color:#065f46;margin-top:12px">
+          ✅ Your data is protected under Rwanda Data Protection Law (2021)<br>
+          ✅ Never share your password with anyone<br>
+          ✅ Support: <a href="mailto:support@artic.health" style="color:#059669">support@artic.health</a>
+        </div>
+      </div>
+      <p style="color:#94a3b8;font-size:11px;text-align:center;margin-top:12px">ARTIC Health Companion · Automated message — do not reply</p>
     </div>`,
+    text: `ARTIC Health Companion — Account Created\n\nHello ${name},\nEmail: ${email}\nAuto-Password: ${tempPassword}\nRole: ${role}\n\nLogin: ${loginUrl}/login\n\nChange your password after first login.`,
   };
 }
 
