@@ -73,10 +73,32 @@ TOKEN=$(curl -s -X POST http://localhost:4001/api/auth/login \
   -d '{"email":"doctor@artic.health","password":"doctor123"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin).get('accessToken',''))" 2>/dev/null)
 
-for EP in /api/appointments /api/appointments/queue /api/laboratory /api/pharmacy/prescriptions /api/billing/invoices /api/insurance /api/inventory /api/radiology /api/notifications /api/reports/kpis /api/inpatient/beds /api/nursing/triage "/api/registry/vaccinations/catalogue" "/api/registry/births" "/api/medical-records/summary/p-001"; do
+MANAGER_TOKEN=$(curl -s -X POST http://localhost:4001/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"manager@artic.health","password":"manager123"}' \
+  | python3 -c "import sys,json;print(json.load(sys.stdin).get('accessToken',''))" 2>/dev/null)
+
+NURSE_TOKEN=$(curl -s -X POST http://localhost:4001/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"nurse@artic.health","password":"nurse123"}' \
+  | python3 -c "import sys,json;print(json.load(sys.stdin).get('accessToken',''))" 2>/dev/null)
+
+for EP in /api/appointments /api/appointments/queue /api/laboratory /api/pharmacy/prescriptions /api/inventory /api/radiology /api/notifications "/api/registry/vaccinations/catalogue" "/api/registry/births" "/api/medical-records/summary/p-001"; do
   S=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" --connect-timeout 5 "http://localhost:4001$EP" 2>/dev/null)
   M="OK"; [ "$S" != "200" ] && M="FAIL"
-  echo "  $M $S  $EP"
+  echo "  $M $S  $EP (doctor)"
+done
+
+for EP in /api/billing/invoices /api/insurance /api/reports/kpis /api/reports/revenue; do
+  S=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $MANAGER_TOKEN" --connect-timeout 5 "http://localhost:4001$EP" 2>/dev/null)
+  M="OK"; [ "$S" != "200" ] && M="FAIL"
+  echo "  $M $S  $EP (manager)"
+done
+
+for EP in /api/inpatient/beds /api/nursing/triage; do
+  S=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $NURSE_TOKEN" --connect-timeout 5 "http://localhost:4001$EP" 2>/dev/null)
+  M="OK"; [ "$S" != "200" ] && M="FAIL"
+  echo "  $M $S  $EP (nurse)"
 done
 
 echo ""
