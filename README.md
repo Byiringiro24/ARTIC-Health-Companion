@@ -1,167 +1,40 @@
-# ARTIC Health Companion — Enterprise Hospital Management System
+# 🏥 ARTIC Health Companion
+## Enterprise Hospital Management System for Rwanda & Africa
 
-> Enterprise-grade, multi-tenant hospital management platform for Rwanda and Sub-Saharan Africa.
-
-[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://typescriptlang.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
----
-
-## Overview
-
-ARTIC Health Companion is a full-stack, production-ready HMIS covering the complete patient journey — from registration and triage through clinical consultation, pharmacy dispensing, laboratory testing, billing, and discharge — while meeting Rwanda MOH reporting requirements and HL7 FHIR interoperability standards.
-
-**18 role-based workspaces · 30+ modules · Rwanda MOH compliant · HL7 FHIR ready**
+**Live:** http://172.209.217.176:3001  
+**API:** http://172.209.217.176:4001/health  
+**GitHub:** https://github.com/Byiringiro24/ARTIC-Health-Companion
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-- Node.js ≥ 20
-- npm ≥ 9
-
-### Run Frontend (Next.js)
 ```bash
-cd frontend
-npm install
-npm run dev
-# Opens on http://localhost:3000
+# Login with any demo account:
+Email: doctor@artic.health   Password: doctor123
+Email: admin@artic.health    Password: admin123
+Email: nurse@artic.health    Password: nurse123
+Email: patient@artic.health  Password: patient123
 ```
 
-### Run Backend (Node.js REST API)
-```bash
-cd backend
-npm run dev
-# API on http://localhost:4000
-```
+## Documentation
 
----
+| # | Document | Description |
+|---|----------|-------------|
+| FIX | [Login Issue Fix](docs/FIX-LOGIN-ISSUE.md) | Login not working? Start here |
+| 1 | [Local Development](docs/1-LOCAL-DEVELOPMENT.md) | Run locally on Windows |
+| 2 | [Server Deployment](docs/2-SERVER-DEPLOYMENT.md) | Deploy to production server |
+| 3 | [User Guide](docs/3-USER-GUIDE.md) | How to use the system |
+| 4 | [Technical Overview](docs/4-TECHNICAL-OVERVIEW.md) | Architecture and stack |
+| 5 | [Project Roadmap](docs/5-PROJECT-ROADMAP.md) | What's built and what's next |
+| 6 | [Mobile App Plan](docs/6-MOBILE-APP-PLAN.md) | React Native app plan |
+| 7 | [Documents Index](docs/7-DOCUMENTS-INDEX.md) | Find everything quickly |
 
-## Demo Accounts
+## Stack
 
-| Role | Email | Password |
-|------|-------|----------|
-| System Admin | admin@artic.health | admin123 |
-| Doctor | doctor@artic.health | doctor123 |
-| Nurse | nurse@artic.health | nurse123 |
-| Pharmacist | pharmacy@artic.health | pharmacy123 |
-| Lab Scientist | lab@artic.health | lab123 |
-| Receptionist | reception@artic.health | front123 |
-| Accountant | accounts@artic.health | money123 |
-| Patient | patient@artic.health | patient123 |
-| Hospital Manager | manager@artic.health | manager123 |
+**Frontend:** Next.js 15 + React 19 + TypeScript + Zustand  
+**Backend:** Node.js v22 + Express 5 + PostgreSQL 16 + Socket.IO  
+**Infrastructure:** Azure VM + Docker + PM2 + UFW  
+**SMS:** Africa's Talking | **Email:** Nodemailer | **AI:** OpenAI (planned)
 
----
-
-## Module Architecture
-
-Each role sees only the modules their permissions allow. All 30+ modules are built as independent React components under `frontend/components/modules/`.
-
-| Module file | Description |
-|-------------|-------------|
-| `ConsultationModule.tsx` | SOAP notes, vitals, lab/imaging orders, prescriptions, CDS |
-| `NursingModule.tsx` | Triage station, MAR, shift handover, ward vitals |
-| `PharmacyModule.tsx` | FEFO inventory, dispensing queue, controlled substances |
-| `LaboratoryModule.tsx` | Specimen workflow, result entry, QC, critical alerts |
-| `RadiologyModule.tsx` | Imaging orders, DICOM/PACS, radiology reports |
-| `InpatientModule.tsx` | Bed map, admission/discharge, ward management |
-| `BillingModule.tsx` | Invoices, line-item detail, payment recording |
-| `InsuranceModule.tsx` | Claims, eligibility verification, RSSB/Mutuelle |
-| `InventoryModule.tsx` | Stock management, expiry tracking, reorder alerts |
-| `ProcurementModule.tsx` | Purchase requests, suppliers, POs |
-| `HRModule.tsx` | Staff directory, attendance, leave management |
-| `AmbulanceModule.tsx` | Fleet status, active dispatch, GPS |
-| `BloodBankModule.tsx` | Blood stock, donor records, transfusion requests |
-| `MortuaryModule.tsx` | Body admission, storage, death certificates |
-| `AssetsModule.tsx` | Equipment register, maintenance schedule |
-| `TelemedicineModule.tsx` | WebRTC video/voice, remote prescriptions |
-| `NotificationsModule.tsx` | SMS/email/WhatsApp, message templates |
-| `ReportsModule.tsx` | MOH reports, PBF indicators, revenue charts |
-| `SurveillanceModule.tsx` | IDSR, disease trends, outbreak monitoring |
-| `InteroperabilityModule.tsx` | FHIR, NID, RSSB, HIE integrations |
-| `QualityModule.tsx` | RAAQH readiness, incident register |
-| `AIModule.tsx` | CDS, predictive analytics, ICD-10 assistant |
-| `MultiTenantModule.tsx` | Hospital network management |
-| `AuditModule.tsx` | Full audit trail with user/IP/action |
-| `PatientPortal.tsx` | Self-service: appointments, results, bills |
-| `SettingsModule.tsx` | Facility configuration, integrations |
-
----
-
-## Technology Stack
-
-### Frontend
-- **Framework:** Next.js 15 (App Router)
-- **Language:** TypeScript 5
-- **Styling:** Custom CSS (no Tailwind — zero flash, fast load)
-- **State:** Zustand
-- **Charts:** Recharts
-- **Icons:** Lucide React
-
-### Backend
-- **Runtime:** Node.js 20+ (pure stdlib — zero dependencies)
-- **API:** REST, port 4000
-- **Auth:** Bearer token (ID-based for demo)
-
----
-
-## Project Structure
-
-```
-Hospital/
-├── frontend/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── page.tsx            # Landing page
-│   │   ├── login/page.tsx      # Login with 18 demo accounts
-│   │   └── dashboard/page.tsx  # Main application shell
-│   ├── components/
-│   │   ├── DashboardApp.tsx    # App shell + inline modules (Overview, Admin, Patients, Appointments, Queue)
-│   │   ├── modules/            # One file per clinical/operational module (26 files)
-│   │   └── ui/                 # Shared components (Modal, Toast, DataTable, StatCard, SectionHeader)
-│   ├── lib/
-│   │   ├── auth.ts             # Session management
-│   │   ├── data.ts             # Demo data (patients, appointments, inventory, etc.)
-│   │   └── store.ts            # Zustand stores (patients, appointments, inventory, lab, billing, toast)
-│   └── types/
-│       └── hms.ts              # All TypeScript types and enums
-├── backend/
-│   └── src/
-│       ├── server.js           # REST API server
-│       └── data.js             # Server-side seed data
-└── README.md
-```
-
----
-
-## Compliance
-
-- Rwanda Ministry of Health (MOH) Guidelines
-- Performance-Based Financing (PBF) indicators
-- RAAQH Accreditation Standards
-- Rwanda Data Protection Law (Law N° 058/2021)
-- HL7 FHIR R4 (interface ready)
-- ICD-10/11 coding support
-- RSSB / Mutuelle insurance integration (demo)
-
----
-
-## Deployment
-
-The project is prepared to run alongside an existing ARTIC VMS deployment on the same server without port conflicts.
-
-- Use [SERVER_DEPLOYMENT.md](SERVER_DEPLOYMENT.md) for the full server-side deployment playbook.
-- For a fast local-to-server deployment, run:
-
-```powershell
-pwsh -File .\scripts\deploy-to-server.ps1 -RemoteHost YOUR_SERVER_IP -RemoteUser artic
-```
-
-This deploys the current repository into a separate directory at /home/artic/artic-hms and uses the non-conflicting ports 3001 and 4001.
-
----
-
-## License
-
-MIT © 2026 ARTIC Health
+## 19 Roles | 31 Modules | Rwanda MOH Compliant
