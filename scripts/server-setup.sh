@@ -19,6 +19,8 @@ docker ps | grep -q "artic-hms-redis" || (cd docker && docker compose up -d hms-
 
 echo "3. Writing backend/.env..."
 cp /home/artic/artic-hms/backend/.env.server /home/artic/artic-hms/backend/.env
+# Strip Windows CRLF line endings that break 'source'
+sed -i 's/\r//' /home/artic/artic-hms/backend/.env
 
 echo "4. Installing backend dependencies..."
 cd /home/artic/artic-hms/backend && npm install --omit=dev --silent
