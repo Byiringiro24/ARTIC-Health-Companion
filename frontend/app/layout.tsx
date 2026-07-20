@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ToastContainer } from "@/components/ui/Toast";
+import { AIFloatingButton } from "@/components/ui/AIFloatingButton";
 
 export const metadata: Metadata = {
   title: "ARTIC Health Companion",
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         {children}
         <ToastContainer />
+        <AIFloatingButton />
       </body>
     </html>
   );
