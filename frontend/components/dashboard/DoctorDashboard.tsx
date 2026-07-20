@@ -1,13 +1,13 @@
 "use client";
-import { useState, useCallback, useEffect } from "react";
+import { useState } from "react";
 import {
-  CalendarDays, ClipboardList, HeartPulse, UserRoundPlus,
-  Search, Bell, AlertCircle, CheckCircle, Clock, ChevronRight,
+  CalendarDays, ClipboardList, UserRoundPlus,
+  Bell, AlertCircle, CheckCircle, Clock, ChevronRight,
   Activity, Pill, FlaskConical, FileText, Users, MessageSquare,
-  TrendingUp, ArrowUpRight, Eye, Plus, X, Stethoscope, Thermometer,
-  RefreshCw, Send, Download,
+  TrendingUp, Plus, X, Stethoscope, Send, Download, Search,
 } from "lucide-react";
 import type { AppUser } from "@/types/hms";
+import { PatientRegistrationForm } from "@/components/dashboard/PatientRegistrationForm";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const TrafficLight = ({ level }: { level: "red"|"amber"|"green" }) => (
@@ -299,116 +299,7 @@ export function DoctorDashboard({ user }: { user?: AppUser }) {
 
         {/* ── REGISTER TAB ── */}
         {tab==="register" && (
-          <div style={{ display:"grid",gap:16 }}>
-            <div style={{ fontWeight:700,fontSize:16,color:"#0f172a" }}>Register New Patient</div>
-            <div style={{ background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,padding:"12px 16px",fontSize:12,color:"#0369a1" }}>
-              📋 Complete the patient registration form. Fields marked * are required. This form covers identification, medical history, vitals, and consent.
-            </div>
-
-            {/* Sections A-F shown inline in card grid */}
-            {[
-              {
-                sec:"A — Patient Identification", fields:[
-                  { l:"MRN (auto-generated)",     t:"text",    ph:"MRN-2026-XXXX", ro:true },
-                  { l:"National ID (NID) *",       t:"text",    ph:"1 1990..." },
-                  { l:"Last Name *",               t:"text",    ph:"Family name" },
-                  { l:"First Name *",              t:"text",    ph:"Given name" },
-                  { l:"Date of Birth *",           t:"date",    ph:"" },
-                  { l:"Gender *",                  t:"select",  opts:["Male","Female","Other"] },
-                  { l:"Nationality",               t:"select",  opts:["Rwandan","Other"] },
-                  { l:"Marital Status",            t:"select",  opts:["Single","Married","Widowed","Divorced"] },
-                ],
-              },
-              {
-                sec:"B — Contact Information", fields:[
-                  { l:"Phone Number *",            t:"tel",     ph:"+250 7XX XXX XXX" },
-                  { l:"Address / Village",         t:"text",    ph:"Sector, District, Province" },
-                  { l:"Next of Kin Name",          t:"text",    ph:"Full name" },
-                  { l:"Next of Kin Phone",         t:"tel",     ph:"+250 7XX XXX XXX" },
-                  { l:"NOK Relationship",          t:"select",  opts:["Spouse","Parent","Child","Sibling","Other"] },
-                ],
-              },
-              {
-                sec:"C — Insurance Information", fields:[
-                  { l:"Insurance Type",            t:"select",  opts:["CBHI/Mutuelle","RSSB","Private","Cash"] },
-                  { l:"Insurance Number",          t:"text",    ph:"Membership / policy number" },
-                  { l:"Employer (if applicable)",  t:"text",    ph:"Employer name" },
-                ],
-              },
-              {
-                sec:"D — Chief Complaint & History", fields:[
-                  { l:"Chief Complaint *",         t:"textarea", ph:"Main reason for visit in patient's words" },
-                  { l:"History of Present Illness",t:"textarea", ph:"Onset, character, radiation, timing, severity..." },
-                  { l:"Past Medical History",      t:"textarea", ph:"Previous diagnoses, surgeries, hospitalizations" },
-                  { l:"Current Medications",       t:"textarea", ph:"Drug name, dose, frequency" },
-                  { l:"Known Allergies",           t:"textarea", ph:"Drug allergies, food allergies, reactions" },
-                  { l:"Family History",            t:"textarea", ph:"Relevant family medical history" },
-                  { l:"Social History",            t:"textarea", ph:"Smoking, alcohol, occupation, lifestyle" },
-                ],
-              },
-              {
-                sec:"E — Vital Signs", fields:[
-                  { l:"Blood Pressure (mmHg)",     t:"text",    ph:"120/80" },
-                  { l:"Temperature (°C)",          t:"text",    ph:"36.5" },
-                  { l:"Pulse (bpm)",               t:"text",    ph:"72" },
-                  { l:"Respiratory Rate",          t:"text",    ph:"16" },
-                  { l:"SpO₂ (%)",                  t:"text",    ph:"98" },
-                  { l:"Weight (kg)",               t:"text",    ph:"65" },
-                  { l:"Height (cm)",               t:"text",    ph:"168" },
-                  { l:"BMI (auto)",                t:"text",    ph:"Calculated" },
-                ],
-              },
-              {
-                sec:"F — Diagnosis & Treatment Plan", fields:[
-                  { l:"ICD-10 Diagnosis Code",     t:"text",    ph:"e.g. A09 — Nonspecific gastroenteritis" },
-                  { l:"Clinical Notes",            t:"textarea", ph:"Physical examination findings, assessment" },
-                  { l:"Treatment Plan",            t:"textarea", ph:"Interventions, medications prescribed, referrals" },
-                  { l:"Follow-up Date",            t:"date",    ph:"" },
-                  { l:"Follow-up Instructions",    t:"textarea", ph:"What patient should do before next visit" },
-                ],
-              },
-            ].map(section=>(
-              <div key={section.sec} style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden" }}>
-                <div style={{ padding:"12px 18px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",fontWeight:700,fontSize:13,color:"#0f172a" }}>
-                  📋 {section.sec}
-                </div>
-                <div style={{ padding:"16px 18px",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12 }}>
-                  {section.fields.map(field=>(
-                    <div key={field.l}>
-                      <label style={{ fontSize:11,fontWeight:600,color:"#374151",display:"block",marginBottom:4 }}>{field.l}</label>
-                      {field.t==="textarea" ? (
-                        <textarea rows={3} placeholder={field.ph} style={{ width:"100%",padding:"8px 11px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:12,outline:"none",resize:"vertical",fontFamily:"inherit",color:"#0f172a",boxSizing:"border-box" }}/>
-                      ) : field.t==="select" ? (
-                        <select style={{ width:"100%",padding:"8px 11px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:12,outline:"none",color:"#0f172a" }}>
-                          <option value="">Select…</option>
-                          {(field.opts||[]).map((o:string)=><option key={o}>{o}</option>)}
-                        </select>
-                      ) : (
-                        <input type={field.t} placeholder={field.ph} readOnly={field.ro} style={{ width:"100%",padding:"8px 11px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:12,outline:"none",color:"#0f172a",background:field.ro?"#f8fafc":"white",boxSizing:"border-box" }}/>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {/* Consent section */}
-            <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"16px 18px" }}>
-              <div style={{ fontWeight:700,fontSize:13,color:"#0f172a",marginBottom:10 }}>R — Patient Consent</div>
-              {["I consent to examination and treatment","I consent to data storage under Rwanda DPL 2021","I consent to sharing with treating clinicians"].map((c,i)=>(
-                <label key={i} style={{ display:"flex",alignItems:"flex-start",gap:8,fontSize:12,color:"#374151",marginBottom:8,cursor:"pointer" }}>
-                  <input type="checkbox" style={{ marginTop:2,accentColor:"#059669" }}/>{c}
-                </label>
-              ))}
-            </div>
-
-            <div style={{ display:"flex",justifyContent:"flex-end",gap:10 }}>
-              <button onClick={()=>toast("Draft saved")} style={{ padding:"10px 22px",border:"1px solid #e2e8f0",background:"white",borderRadius:9,cursor:"pointer",fontSize:13,fontWeight:600,color:"#374151" }}>Save Draft</button>
-              <button onClick={()=>{ toast("✅ Patient registered — MRN issued"); setTab("patients"); }} style={{ display:"flex",alignItems:"center",gap:7,padding:"10px 24px",background:"linear-gradient(135deg,#059669,#0891b2)",color:"white",border:"none",borderRadius:9,cursor:"pointer",fontSize:13,fontWeight:700 }}>
-                <UserRoundPlus size={14}/>Register Patient
-              </button>
-            </div>
-          </div>
+          <PatientRegistrationForm />
         )}
 
         {/* ── APPOINTMENTS / CONSULTATIONS TAB ── */}
