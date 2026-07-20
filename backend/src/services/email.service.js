@@ -35,9 +35,6 @@ async function getTransporter() {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
-  // Debug: log presence of credentials (never log the actual password)
-  console.log(`📧 Email init — host:${host||"MISSING"} user:${user||"MISSING"} pass:${pass?"SET ("+pass.length+"chars)":"MISSING"}`);
-
   // Use real SMTP if all three credentials are set
   if (host && user && pass) {
     try {
