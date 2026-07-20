@@ -25,14 +25,18 @@ sed -i 's/\r//' /home/artic/artic-hms/backend/.env
 echo "4. Installing backend dependencies..."
 cd /home/artic/artic-hms/backend && npm install --omit=dev --silent
 
+
 echo "5. Restarting backend..."
 pm2 delete artic-hms-backend 2>/dev/null || true
-# Source the .env file so PM2 inherits all environment variables
-set -a
-source /home/artic/artic-hms/backend/.env
-set +a
-pm2 start src/index.js --name artic-hms-backend
+# Update ecosystem config with SMTP_PASS from .env.server (the authoritative source)
+SMTP_PASS_VAL=$(grep '^SMTP_PASS=' /home/artic/artic-hms/backend/.env | sed 's/\r//' | cut -d'=' -f2)
+if [ -n "$SMTP_PASS_VAL" ]; then
+  sed -i "s|SMTP_PASS:.*|SMTP_PASS:           \"$SMTP_PASS_VAL\",|g" /home/artic/artic-hms/backend/ecosystem.config.cjs
+  echo "   SMTP_PASS injected into ecosystem config"
+fi
+pm2 start /home/artic/artic-hms/backend/ecosystem.config.cjs
 pm2 save
+
 
 echo "6. Building and starting frontend..."
 cd /home/artic/artic-hms/frontend
