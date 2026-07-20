@@ -482,7 +482,111 @@ export async function getSystemAuditLogs({ page=1, limit=50, action, module, dat
   return { data: rows, meta: { total, page:+page, limit:+limit, totalPages: Math.ceil(total/limit) } };
 }
 
-// ── AI Companion — OpenAI-powered with system context fallback ────────────────
+// ── AI Companion — Gemini-powered with system context + local KB fallback ──────
+export async function processAIQuery(query, userId) {
+  if (!query?.trim()) throw new AppError("Query is required", 400, "INVALID_INPUT");
+
+  let response;
+  const GEMINI_KEY = process.env.GEMINI_API_KEY;
+
+  // Try Gemini 2.5 Flash first (most capable, fast)
+  if (GEMINI_KEY) {
+    try {
+      const db = getDb();
+      const [hospCount, userCount, featCount] = await Promise.all([
+        db.prepare(`SELECT COUNT(*) as n FROM hospitals WHERE deleted_at IS NULL`).get(),
+        db.prepare(`SELECT COUNT(*) as n FROM users WHERE deleted_at IS NULL AND is_active=1`).get(),
+        db.prepare(`SELECT COUNT(*) as n FROM feature_flags WHERE default_status='active'`).get(),
+      ]);
+
+      const systemInstruction = `You are the ARTIC Health Companion AI, an intelligent assistant integrated into a hospital management system serving ${hospCount?.n||0} hospitals with ${userCount?.n||0} active healthcare users in Rwanda.
+
+You have expert knowledge of:
+- Rwanda Ministry of Health (MOH) clinical protocols and guidelines (2024 edition)
+- Rwanda Essential Medicines List and National Drug Formulary
+- Rwanda Integrated Health Management Information System (iHMIS)
+- WHO guidelines adapted for Rwanda context
+- East Africa regional health standards
+- Rwanda Data Protection Law (equivalent to HIPAA privacy rules)
+- Hospital administration, staffing, billing, quality management
+
+The system has ${featCount?.n||0} active features. Answer questions about clinical guidance, health education, medication information, Rwanda MOH protocols, hospital operations, staffing, billing, insurance, quality, and administrative management.
+
+Privacy rules: Never generate, infer, or discuss individual patient data. All responses must be appropriate for healthcare professionals. Recommend consultation with qualified medical professionals for clinical decisions.
+
+Be concise, practical, and evidence-based. Use Rwanda-specific context when relevant.`;
+
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ role:"user", parts: [{ text: query }] }],
+          generationConfig: { temperature:0.4, maxOutputTokens:800, topP:0.95 },
+          safetySettings: [
+            { category:"HARM_CATEGORY_HARASSMENT", threshold:"BLOCK_MEDIUM_AND_ABOVE" },
+            { category:"HARM_CATEGORY_DANGEROUS_CONTENT", threshold:"BLOCK_MEDIUM_AND_ABOVE" },
+          ],
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          response = text + "\n\n⚕️ *Powered by ARTIC AI with Rwanda MOH protocols. Verify clinical decisions with qualified professionals.*";
+        }
+      } else {
+        const errData = await res.json().catch(()=>({}));
+        console.warn("Gemini API error:", res.status, errData?.error?.message);
+      }
+    } catch (e) { console.warn("Gemini call failed, using local KB:", e.message); }
+  }
+
+  // Try OpenAI as secondary fallback
+  if (!response && process.env.OPENAI_API_KEY) {
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [
+            { role:"system", content:"You are ARTIC AI, a hospital management assistant for Rwanda. Provide guidance on clinical protocols, operations, and administration. Never access individual patient data." },
+            { role:"user", content: query },
+          ],
+          max_tokens: 600, temperature: 0.4,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        response = data.choices?.[0]?.message?.content || "";
+        if (response) response += "\n\n⚕️ Powered by ARTIC AI with Rwanda MOH protocols.";
+      }
+    } catch (e) { console.warn("OpenAI fallback failed:", e.message); }
+  }
+
+  // Local KB fallback
+  if (!response) {
+    const q = query.toLowerCase();
+    let matched = AI_KB.default;
+    for (const [key, val] of Object.entries(AI_KB)) {
+      if (key !== "default" && q.includes(key)) { matched = val; break; }
+    }
+    response = `Regarding your query about "${query}":\n\n${matched}\n\n⚕️ Local knowledge base response aligned with Rwanda MOH protocols. All clinical decisions require qualified medical professional review.`;
+  }
+
+  // Persist to DB
+  try {
+    const db = getDb();
+    await db.prepare(`CREATE TABLE IF NOT EXISTS ai_query_history (id TEXT PRIMARY KEY, user_id TEXT, query TEXT NOT NULL, response TEXT NOT NULL, source TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+    const src = process.env.GEMINI_API_KEY?"gemini":process.env.OPENAI_API_KEY?"openai":"local-kb";
+    await db.prepare(`INSERT INTO ai_query_history (id,user_id,query,response,source) VALUES(?,?,?,?,?)`).run(`aiq-${uuidv4().slice(0,8)}`, userId||null, query, response, src);
+  } catch { /* non-blocking */ }
+
+  const source = process.env.GEMINI_API_KEY?"gemini":process.env.OPENAI_API_KEY?"openai":"local-kb";
+  return { query, response, timestamp: new Date().toISOString(), source };
+}
 const AI_KB = {
   "malaria": "Rwanda MOH malaria treatment: Adults - Artemether-Lumefantrine (AL) 6-dose regimen. Children by weight. Confirm with current RBC guidelines.",
   "medication": "Refer to Rwanda MOH Drug Formulary (latest edition). Consult clinical pharmacist for complex dosing. Always verify allergies and interactions.",
@@ -576,8 +680,8 @@ The system currently has ${featCount?.n||0} active features. Answer questions ab
 export async function getAIHistory(userId, { limit=20 } = {}) {
   try {
     const db = getDb();
-    await db.prepare(`CREATE TABLE IF NOT EXISTS ai_query_history (id TEXT PRIMARY KEY, user_id TEXT, query TEXT NOT NULL, response TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
-    return db.prepare(`SELECT id,query,response,created_at FROM ai_query_history WHERE user_id=? ORDER BY created_at DESC LIMIT ?`).all(userId, +limit);
+    await db.prepare(`CREATE TABLE IF NOT EXISTS ai_query_history (id TEXT PRIMARY KEY, user_id TEXT, query TEXT NOT NULL, response TEXT NOT NULL, source TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+    return db.prepare(`SELECT id,query,response,source,created_at FROM ai_query_history WHERE user_id=? ORDER BY created_at DESC LIMIT ?`).all(userId, +limit);
   } catch { return []; }
 }
 

@@ -30,9 +30,10 @@ export default function LoginPage() {
     }
 
     show(`Welcome, ${user.name}!`, "success");
-    // Use hard redirect — guarantees navigation regardless of router state
+    // Route by role
+    const route = getDashboardRoute(user);
     setTimeout(() => {
-      window.location.href = "/dashboard";
+      window.location.href = route;
     }, 300);
   }
 

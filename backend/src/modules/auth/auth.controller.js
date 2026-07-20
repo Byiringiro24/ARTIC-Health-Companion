@@ -81,6 +81,22 @@ export const changePassword = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Password changed successfully. Please log in again." });
 });
 
+// POST /api/auth/request-otp — Step 1: verify current password, send OTP
+export const requestPasswordOTP = asyncHandler(async (req, res) => {
+  const { currentPassword } = req.body;
+  if (!currentPassword) return res.status(400).json({ success:false, message:"Current password required" });
+  const result = await authService.requestPasswordChangeOTP(req.user.id, currentPassword);
+  res.json({ success:true, ...result });
+});
+
+// POST /api/auth/confirm-password-otp — Step 2: validate OTP + set new password
+export const confirmPasswordOTP = asyncHandler(async (req, res) => {
+  const { otp, newPassword } = req.body;
+  if (!otp || !newPassword) return res.status(400).json({ success:false, message:"OTP and new password required" });
+  const result = await authService.confirmPasswordChangeWithOTP(req.user.id, otp, newPassword);
+  res.json({ success:true, ...result });
+});
+
 // POST /api/auth/forgot-password
 export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;

@@ -20,7 +20,7 @@ function normalizeUser(user: any): AppUser | null {
     password: user.password ?? undefined,
     role,
     department: user.department ?? user.departmentName ?? "",
-    facility: user.facility ?? user.facilityName ?? user.hospital ?? "",
+    facility: user.facility ?? user.facilityName ?? user.hospital ?? user.hospitalName ?? "",
     patientId: user.patientId ?? user.patient_id ?? undefined,
     accessToken: user.accessToken,
     refreshToken: user.refreshToken,
@@ -28,6 +28,12 @@ function normalizeUser(user: any): AppUser | null {
     roleLabel: user.roleLabel || user.role_label,
     firstName: user.firstName || user.first_name,
     lastName: user.lastName || user.last_name,
+    hospitalId: user.hospitalId || user.hospital_id || undefined,
+    tenantId: user.tenantId || user.tenant_id || undefined,
+    departmentId: user.departmentId || user.department_id || undefined,
+    roleId: user.roleId || user.role_id || undefined,
+    jobTitle: user.jobTitle || user.job_title || undefined,
+    modules: user.modules || undefined,
   };
 }
 
@@ -94,7 +100,14 @@ export async function logout(): Promise<void> {
 }
 
 export function getDashboardRoute(user: AppUser | null | undefined): string {
-  return "/dashboard";
+  if (!user) return "/dashboard";
+  const role = user.role || (user as any).roleName;
+  switch (role) {
+    case "system-admin":     return "/admin";
+    case "hospital-manager": return "/hospital-manager";
+    case "patient":          return "/patient-portal";
+    default:                 return "/dashboard";
+  }
 }
 
 export function canAccess(user: AppUser, module: string) {

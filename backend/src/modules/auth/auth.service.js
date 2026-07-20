@@ -222,3 +222,124 @@ export async function resetPassword(token, newPassword) {
 
   return { success: true, name: `${record.first_name} ${record.last_name}` };
 }
+
+// ── OTP-based Password Change ─────────────────────────────────────────────────
+// Step 1: User enters current password → system sends OTP to email
+export async function requestPasswordChangeOTP(userId, currentPassword) {
+  const db = getDb();
+  const user = await db.prepare(`SELECT * FROM users WHERE id=? AND deleted_at IS NULL`).get(userId);
+  if (!user) throw new NotFoundError("User");
+
+  // Verify current password first
+  const valid = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!valid) throw new AuthError("Current password is incorrect");
+
+  // Generate 6-digit OTP
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
+
+  // Store OTP
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS password_change_otps (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      otp TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      used INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`).run();
+  } catch {}
+
+  // Invalidate old OTPs
+  await db.prepare(`UPDATE password_change_otps SET used=1 WHERE user_id=?`).run(userId);
+  await db.prepare(`INSERT INTO password_change_otps (id,user_id,otp,expires_at) VALUES(?,?,?,?)`).run(`pco-${uuidv4().slice(0,8)}`, userId, otp, expiresAt);
+
+  // Send OTP email
+  try {
+    const { sendEmail } = await import("../../services/email.service.js");
+    const name = `${user.first_name} ${user.last_name}`;
+    await sendEmail({
+      to: user.email,
+      subject: "ARTIC HMS — Password Change Verification Code",
+      html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#0891b2,#7c3aed);padding:20px;border-radius:12px;text-align:center;margin-bottom:16px">
+          <h1 style="color:white;margin:0;font-size:20px">🔐 ARTIC Health Companion</h1>
+        </div>
+        <div style="background:white;padding:22px;border-radius:12px;border:1px solid #e2e8f0">
+          <h2 style="color:#0f172a;margin:0 0 12px">Password Change Verification</h2>
+          <p>Hello <strong>${name}</strong>,</p>
+          <p>You requested to change your password. Use this verification code to confirm:</p>
+          <div style="text-align:center;margin:24px 0">
+            <div style="background:#f0f9ff;border:2px solid #0891b2;borderRadius:12px;padding:20px;display:inline-block">
+              <div style="font-size:38px;font-weight:900;color:#0891b2;letter-spacing:8px;font-family:monospace">${otp}</div>
+              <div style="font-size:12px;color:#64748b;margin-top:8px">Valid for 10 minutes</div>
+            </div>
+          </div>
+          <div style="background:#fff7ed;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:13px;color:#92400e">
+            ⚠️ If you did NOT request this, your account may be at risk. Contact support immediately.
+          </div>
+          <p style="color:#94a3b8;font-size:12px;margin-top:16px">This code expires in 10 minutes and can only be used once.</p>
+        </div>
+      </div>`,
+      text: `ARTIC HMS Password Change\n\nYour OTP code: ${otp}\nValid for 10 minutes.\n\nIf you did not request this, contact support.`,
+    });
+  } catch (e) { console.warn("OTP email failed:", e.message); }
+
+  return { sent: true, email: user.email, hint: `OTP sent to ${user.email.replace(/(.{2}).*(@.*)/, '$1***$2')}` };
+}
+
+// Step 2: User enters OTP + new password → system validates and changes
+export async function confirmPasswordChangeWithOTP(userId, otp, newPassword) {
+  const db = getDb();
+
+  if (newPassword.length < 8) throw new AppError("Password must be at least 8 characters", 422, "WEAK_PASSWORD");
+
+  // Validate OTP
+  const record = await db.prepare(`
+    SELECT * FROM password_change_otps
+    WHERE user_id=? AND otp=? AND used=0
+    ORDER BY created_at DESC LIMIT 1
+  `).get(userId, otp);
+
+  if (!record) throw new AuthError("Invalid OTP code. Please request a new one.");
+  if (new Date(record.expires_at) < new Date()) {
+    await db.prepare(`UPDATE password_change_otps SET used=1 WHERE id=?`).run(record.id);
+    throw new AuthError("OTP has expired. Please request a new verification code.");
+  }
+
+  // Mark OTP as used
+  await db.prepare(`UPDATE password_change_otps SET used=1 WHERE id=?`).run(record.id);
+
+  // Hash and update password
+  const hash = await bcrypt.hash(newPassword, config.bcrypt.rounds);
+  await db.prepare(`UPDATE users SET password_hash=?, must_change_password=0, password_changed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(hash, userId);
+
+  // Revoke all sessions for security
+  await revokeAllUserTokens(userId);
+
+  // Send confirmation email
+  try {
+    const user = await db.prepare(`SELECT email, first_name, last_name FROM users WHERE id=?`).get(userId);
+    const { sendEmail } = await import("../../services/email.service.js");
+    await sendEmail({
+      to: user.email,
+      subject: "ARTIC HMS — Password Changed Successfully",
+      html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#059669,#0891b2);padding:20px;border-radius:12px;text-align:center;margin-bottom:16px">
+          <h1 style="color:white;margin:0;font-size:20px">✅ Password Changed</h1>
+        </div>
+        <div style="background:white;padding:22px;border-radius:12px;border:1px solid #e2e8f0">
+          <p>Hello <strong>${user.first_name} ${user.last_name}</strong>,</p>
+          <p>Your ARTIC HMS password was successfully changed on <strong>${new Date().toLocaleString()}</strong>.</p>
+          <p>All active sessions have been logged out for your security.</p>
+          <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;font-size:13px;color:#dc2626">
+            ⚠️ If you did NOT make this change, contact your administrator immediately.
+          </div>
+        </div>
+      </div>`,
+      text: `ARTIC HMS: Your password was changed on ${new Date().toLocaleString()}. If you didn't do this, contact support.`,
+    });
+  } catch {}
+
+  return { success: true, message: "Password changed successfully. Please log in with your new password." };
+}

@@ -49,6 +49,20 @@ router.get("/me", authenticate, ctrl.me);
 router.post("/change-password", authenticate, validate(changePasswordSchema), ctrl.changePassword);
 
 /**
+ * @route   POST /api/auth/request-otp
+ * @desc    Step 1 of secure password change: verify current password, send OTP to email
+ * @access  Protected
+ */
+router.post("/request-otp", authenticate, ctrl.requestPasswordOTP);
+
+/**
+ * @route   POST /api/auth/confirm-password-otp
+ * @desc    Step 2 of secure password change: validate OTP + set new password
+ * @access  Protected
+ */
+router.post("/confirm-password-otp", authenticate, ctrl.confirmPasswordOTP);
+
+/**
  * @route   POST /api/auth/forgot-password
  * @desc    Send password reset email
  * @access  Public

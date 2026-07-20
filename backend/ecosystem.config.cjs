@@ -63,6 +63,12 @@ module.exports = {
         // ── OpenAI (optional — enables GPT-powered AI companion) ───────────────
         OPENAI_API_KEY: "",
 
+        // ── Gemini AI (Google) — Primary AI provider ──────────────────────────
+        // IMPORTANT: Revoke the key that was shared publicly, generate a new one at:
+        // https://aistudio.google.com/app/apikey
+        // Then update this value and run: bash scripts/update-gemini-key.sh YOUR_NEW_KEY
+        GEMINI_API_KEY: "AIzaSyAb8RN6LKirr2MOJn-0iybuUApe_Bj-GdsjKfA2icv76L7H85kA",
+
         // ── SMS Africa's Talking (optional) ───────────────────────────────────
         AT_API_KEY:   "",
         AT_USERNAME:  "sandbox",
