@@ -34,6 +34,19 @@ if [ -n "$SMTP_PASS_VAL" ]; then
   sed -i "s|SMTP_PASS:.*|SMTP_PASS:           \"$SMTP_PASS_VAL\",|g" /home/artic/artic-hms/backend/ecosystem.config.cjs
   echo "   SMTP_PASS injected into ecosystem config"
 fi
+# Update ecosystem config with GEMINI_API_KEY from .env
+GEMINI_KEY_VAL=$(grep '^GEMINI_API_KEY=' /home/artic/artic-hms/backend/.env | sed 's/\r//' | cut -d'=' -f2)
+if [ -n "$GEMINI_KEY_VAL" ] && [ "$GEMINI_KEY_VAL" != "REPLACE_WITH_NEW_GEMINI_KEY" ]; then
+  /usr/bin/python3 -c "
+key = '$GEMINI_KEY_VAL'
+with open('/home/artic/artic-hms/backend/ecosystem.config.cjs', 'r') as f:
+    content = f.read()
+content = content.replace('REPLACE_WITH_NEW_GEMINI_KEY', key)
+with open('/home/artic/artic-hms/backend/ecosystem.config.cjs', 'w') as f:
+    f.write(content)
+print('   GEMINI_API_KEY injected into ecosystem config')
+" 2>/dev/null || true
+fi
 pm2 start /home/artic/artic-hms/backend/ecosystem.config.cjs
 pm2 save
 
