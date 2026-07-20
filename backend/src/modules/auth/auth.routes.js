@@ -48,4 +48,18 @@ router.get("/me", authenticate, ctrl.me);
  */
 router.post("/change-password", authenticate, validate(changePasswordSchema), ctrl.changePassword);
 
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Send password reset email
+ * @access  Public
+ */
+router.post("/forgot-password", authLimiter, ctrl.forgotPassword);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password using token from email
+ * @access  Public
+ */
+router.post("/reset-password", authLimiter, ctrl.resetPassword);
+
 export default router;

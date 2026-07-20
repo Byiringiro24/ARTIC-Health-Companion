@@ -3,6 +3,7 @@
  */
 
 import bcrypt from "bcryptjs";
+import { v4 as uuidv4 } from "uuid";
 import { getDb } from "../../database/connection.js";
 import {
   issueAccessToken, issueRefreshToken, saveRefreshToken,
@@ -12,6 +13,7 @@ import {
   AuthError, NotFoundError, AppError,
 } from "../../middleware/errorHandler.js";
 import { config } from "../../config/index.js";
+import { sendEmail, emailPasswordReset } from "../../services/email.service.js";
 
 const MAX_ATTEMPTS  = 5;
 const LOCK_MINUTES  = 30;
@@ -147,4 +149,76 @@ function safeUser(user, modules = []) {
     mustChangePw: Boolean(user.must_change_password),
     modules,
   };
+}
+
+// ── Forgot Password ───────────────────────────────────────────────────────────
+export async function forgotPassword(email, frontendUrl) {
+  const db = getDb();
+  const user = await db.prepare(`SELECT id, first_name, last_name, email FROM users WHERE LOWER(email)=LOWER(?) AND deleted_at IS NULL AND is_active=1`).get(email.trim());
+
+  // Always respond with success to prevent email enumeration
+  if (!user) return { sent: false };
+
+  // Generate a secure token (6-char code + UUID portion)
+  const token = uuidv4().replace(/-/g,"").slice(0,32);
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+
+  // Store token in DB — create table if not exists
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      used INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`).run();
+  } catch {}
+
+  // Invalidate old tokens for this user
+  await db.prepare(`UPDATE password_reset_tokens SET used=1 WHERE user_id=?`).run(user.id);
+
+  // Insert new token
+  await db.prepare(`INSERT INTO password_reset_tokens (id,user_id,token,expires_at) VALUES(?,?,?,?)`).run(`prt-${uuidv4().slice(0,8)}`, user.id, token, expiresAt);
+
+  // Send email
+  const resetLink = `${frontendUrl || process.env.FRONTEND_URL || "http://172.209.217.176:3001"}/reset-password?token=${token}`;
+  const name = `${user.first_name} ${user.last_name}`;
+  const { subject, html, text } = emailPasswordReset({ name, resetLink, expiresIn: "1 hour" });
+  await sendEmail({ to: user.email, subject, html, text });
+
+  return { sent: true };
+}
+
+// ── Reset Password ────────────────────────────────────────────────────────────
+export async function resetPassword(token, newPassword) {
+  const db = getDb();
+
+  // Validate token
+  const record = await db.prepare(`
+    SELECT prt.*, u.id as uid, u.first_name, u.last_name
+    FROM password_reset_tokens prt
+    JOIN users u ON u.id=prt.user_id
+    WHERE prt.token=? AND prt.used=0
+  `).get(token);
+
+  if (!record) throw new AuthError("Invalid or expired reset token. Please request a new one.");
+  if (new Date(record.expires_at) < new Date()) {
+    await db.prepare(`UPDATE password_reset_tokens SET used=1 WHERE token=?`).run(token);
+    throw new AuthError("Reset token has expired. Please request a new one.");
+  }
+
+  if (newPassword.length < 8) throw new AppError("Password must be at least 8 characters", 422, "WEAK_PASSWORD");
+
+  // Hash and update
+  const hash = await bcrypt.hash(newPassword, config.bcrypt.rounds);
+  await db.prepare(`UPDATE users SET password_hash=?, must_change_password=0, password_changed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(hash, record.uid);
+
+  // Mark token as used
+  await db.prepare(`UPDATE password_reset_tokens SET used=1 WHERE token=?`).run(token);
+
+  // Revoke all existing sessions
+  await revokeAllUserTokens(record.uid);
+
+  return { success: true, name: `${record.first_name} ${record.last_name}` };
 }

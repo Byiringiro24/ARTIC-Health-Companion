@@ -125,14 +125,24 @@ export default function SuperAdminPage() {
   // Modals
   const [showAddHosp,  setShowAddHosp]   = useState(false);
   const [showHospDet,  setShowHospDet]   = useState<any>(null);
+  const [showEditHosp, setShowEditHosp]  = useState<any>(null);
   const [showAddInv,   setShowAddInv]    = useState(false);
   const [showInvDet,   setShowInvDet]    = useState<any>(null);
   const [showEditTier, setShowEditTier]  = useState<any>(null);
   const [showCreateGrp,setShowCreateGrp] = useState(false);
   const [reqTab, setReqTab]             = useState<"pending"|"history">("pending");
 
-  // Hospital form
+  // Hospital form — with live MOH code preview
   const [hospForm, setHospForm] = useState({ name:"",email:"",adminEmail:"",tempPassword:"",phone:"",type:"district",mohCode:"",tier:"trial" as TierLevel });
+
+  // Auto-preview MOH code as user fills in name+type
+  function previewMOHCode(name: string, type: string) {
+    if (!name.trim()) return "";
+    const typeMap: Record<string,string> = { district:"DH",referral:"RH",clinic:"CL",health_center:"HC",private:"PH",dispensary:"DS" };
+    const prefix = typeMap[type] || "GH";
+    const year = new Date().getFullYear();
+    return `RW-${prefix}-${year}-XXXX (auto)`;
+  }
 
   // Invoice form
   const [invForm, setInvForm] = useState({ hospitalId:"",amount:"",currency:"USD",periodStart:"",periodEnd:"",notes:"" });
@@ -267,6 +277,21 @@ export default function SuperAdminPage() {
   async function setTier(hospitalId:string, tier:TierLevel) {
     try { await superAdminApi.setTierFeatures(hospitalId,tier); show(`Tier → ${TL[tier]}`,"success"); load(); }
     catch { show("Failed","error"); }
+  }
+
+  async function editHospital(id: string, data: any) {
+    try {
+      await (superAdminApi as any).updateHospital(id, data);
+      show("Hospital updated","success"); setShowEditHosp(null); load();
+    } catch(e:any) { show(e.message||"Failed","error"); }
+  }
+
+  async function deleteHospital(id: string, name: string) {
+    if (!confirm(`Delete "${name}"? This will deactivate the hospital and cancel its subscription. This cannot be undone.`)) return;
+    try {
+      await (superAdminApi as any).deleteHospital(id);
+      show(`"${name}" deleted`,"success"); load();
+    } catch(e:any) { show(e.message||"Failed to delete","error"); }
   }
 
   // Request handlers
@@ -654,6 +679,12 @@ export default function SuperAdminPage() {
                     ))}
                     <button onClick={()=>setShowHospDet(h)} style={{ marginLeft:"auto",display:"flex",alignItems:"center",gap:3,padding:"3px 9px",borderRadius:6,border:"1px solid #e2e8f0",background:"white",cursor:"pointer",fontSize:10,color:"#374151" }}>
                       <Eye size={11}/>Details
+                    </button>
+                    <button onClick={()=>setShowEditHosp({...h})} style={{ display:"flex",alignItems:"center",gap:3,padding:"3px 9px",borderRadius:6,border:"1px solid #e2e8f0",background:"white",cursor:"pointer",fontSize:10,color:"#0891b2",fontWeight:600 }}>
+                      <Edit size={11}/>Edit
+                    </button>
+                    <button onClick={()=>deleteHospital(h.id,h.name)} style={{ display:"flex",alignItems:"center",gap:3,padding:"3px 9px",borderRadius:6,border:"1px solid #fecaca",background:"#fff5f5",cursor:"pointer",fontSize:10,color:"#dc2626",fontWeight:600 }}>
+                      🗑️ Delete
                     </button>
                   </div>
                 </Card>
@@ -1159,6 +1190,11 @@ export default function SuperAdminPage() {
             </div>
             <div style={{ background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 12px",marginBottom:14,fontSize:12,color:"#0369a1" }}>
               🔑 MOH Code is <strong>auto-generated</strong> (unique, format: RW-DH-2026-XXXX). Leave blank or provide custom code.
+              {hospForm.name && !hospForm.mohCode && (
+                <div style={{ marginTop:6,fontFamily:"monospace",fontWeight:700,fontSize:13,color:"#0891b2",background:"#e0f2fe",borderRadius:5,padding:"3px 8px",display:"inline-block" }}>
+                  Preview: {previewMOHCode(hospForm.name, hospForm.type)}
+                </div>
+              )}
             </div>
             <div style={{ background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"10px 12px",marginBottom:14,fontSize:12,color:"#065f46" }}>
               📧 A <strong>welcome email</strong> will be sent to the hospital email with login credentials and MOH code.
@@ -1218,8 +1254,44 @@ export default function SuperAdminPage() {
         </div>
       )}
 
-      {/* Create Invoice */}
-      {showAddInv && (
+      {/* Edit Hospital */}
+      {showEditHosp && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}>
+          <div style={{ background:"white",borderRadius:14,padding:"22px 24px",width:"100%",maxWidth:480,maxHeight:"88vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.22)" }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+              <div style={{ fontWeight:800,fontSize:15,color:"#0f172a" }}>✏️ Edit: {showEditHosp.name}</div>
+              <button onClick={()=>setShowEditHosp(null)} style={{ border:"none",background:"none",cursor:"pointer",color:"#64748b" }}><X size={17}/></button>
+            </div>
+            {showEditHosp.moh_code && (
+              <div style={{ background:"#ecfeff",border:"1px solid #bae6fd",borderRadius:7,padding:"8px 12px",marginBottom:12,display:"flex",alignItems:"center",gap:8,fontSize:12 }}>
+                <span style={{ color:"#0369a1" }}>MOH Code:</span>
+                <span style={{ fontFamily:"monospace",fontWeight:800,color:"#0891b2",fontSize:13 }}>{showEditHosp.moh_code}</span>
+                <span style={{ color:"#94a3b8",fontSize:10 }}>(read-only — generated on creation)</span>
+              </div>
+            )}
+            <div style={{ display:"grid",gap:11 }}>
+              {[{k:"name",l:"Hospital Name",t:"text"},{k:"email",l:"Email",t:"email"},{k:"phone",l:"Phone",t:"text"}].map((f:any)=>(
+                <div key={f.k}><label style={{ fontSize:11,fontWeight:600,color:"#374151",display:"block",marginBottom:4 }}>{f.l}</label>
+                <input value={showEditHosp[f.k]||""} onChange={e=>setShowEditHosp({...showEditHosp,[f.k]:e.target.value})} type={f.t} style={{ width:"100%",padding:"8px 11px",borderRadius:7,border:"1px solid #e2e8f0",fontSize:12,color:"#0f172a",outline:"none",boxSizing:"border-box" }}/></div>
+              ))}
+              <div><label style={{ fontSize:11,fontWeight:600,color:"#374151",display:"block",marginBottom:4 }}>Type</label>
+              <select value={showEditHosp.type||"district"} onChange={e=>setShowEditHosp({...showEditHosp,type:e.target.value})} style={{ width:"100%",padding:"8px 11px",borderRadius:7,border:"1px solid #e2e8f0",fontSize:12,outline:"none" }}>
+                <option value="district">District Hospital</option><option value="referral">Referral Hospital</option>
+                <option value="clinic">Clinic</option><option value="health_center">Health Center</option>
+                <option value="private">Private Hospital</option><option value="dispensary">Dispensary</option>
+              </select></div>
+            </div>
+            <div style={{ display:"flex",gap:8,justifyContent:"flex-end",marginTop:18 }}>
+              <button onClick={()=>setShowEditHosp(null)} style={{ padding:"8px 18px",borderRadius:8,border:"1px solid #e2e8f0",background:"white",cursor:"pointer",fontSize:12,color:"#374151",fontWeight:600 }}>Cancel</button>
+              <button onClick={()=>editHospital(showEditHosp.id,{ name:showEditHosp.name,email:showEditHosp.email,phone:showEditHosp.phone,type:showEditHosp.type })} style={{ display:"flex",alignItems:"center",gap:5,padding:"8px 20px",background:"#0891b2",color:"white",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700 }}>
+                <Save size={13}/>Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Invoice */}      {showAddInv && (
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}>
           <div style={{ background:"white",borderRadius:14,padding:"22px 24px",width:"100%",maxWidth:440,boxShadow:"0 20px 60px rgba(0,0,0,0.22)" }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>

@@ -217,10 +217,13 @@ export const superAdminApi = {
   getHospitalFeatures:(id: string)                        => get(`/api/super-admin/hospitals/${id}/features`),
   setFeatureAccess:   (hospitalId: string, data: unknown) => post(`/api/super-admin/hospitals/${hospitalId}/features`, data),
   setTierFeatures:    (hospitalId: string, tier: string)  => post(`/api/super-admin/hospitals/${hospitalId}/tier`, { tier }),
+  updateHospital:     (id: string, data: unknown)         => patch(`/api/super-admin/hospitals/${id}`, data),
+  deleteHospital:     (id: string)                        => del(`/api/super-admin/hospitals/${id}`),
 
   // Feature access requests
   listRequests:       (params?: Record<string,string>)    => get(`/api/super-admin/requests?${new URLSearchParams(params)}`),
   resolveRequest:     (id: string, decision: string, adminNotes: string) => patch(`/api/super-admin/requests/${id}`, { decision, adminNotes }),
+  submitRequest:      (data: unknown)                     => post("/api/super-admin/requests", data),
 
   // Billing / invoices
   listInvoices:       (params?: Record<string,string>)    => get(`/api/super-admin/invoices?${new URLSearchParams(params)}`),

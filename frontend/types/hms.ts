@@ -81,6 +81,16 @@ export type AppUser = {
   roleLabel?: string;
   firstName?: string;
   lastName?: string;
+  // Backend API fields (from safeUser)
+  hospitalId?: string;
+  tenantId?: string;
+  departmentId?: string;
+  roleId?: string;
+  jobTitle?: string;
+  profileImage?: string;
+  mustChangePw?: boolean;
+  lastLoginAt?: string;
+  modules?: string[];
 };
 
 export type RoleDefinition = {

@@ -80,3 +80,21 @@ export const changePassword = asyncHandler(async (req, res) => {
   await authService.changePassword(req.user.id, currentPassword, newPassword);
   res.json({ success: true, message: "Password changed successfully. Please log in again." });
 });
+
+// POST /api/auth/forgot-password
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+  const frontendUrl = req.headers.origin || process.env.FRONTEND_URL;
+  await authService.forgotPassword(email, frontendUrl);
+  // Always return 200 to prevent email enumeration
+  res.json({ success: true, message: "If that email is registered, a reset link will arrive shortly." });
+});
+
+// POST /api/auth/reset-password
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) return res.status(400).json({ success: false, message: "Token and new password are required" });
+  const result = await authService.resetPassword(token, newPassword);
+  res.json({ success: true, message: `Password reset successfully. You can now log in, ${result.name}.` });
+});
