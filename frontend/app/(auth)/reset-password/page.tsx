@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from "react";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -7,7 +8,7 @@ import { useToast } from "@/lib/store";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://172.209.217.176:4001";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { show } = useToast();
@@ -56,11 +57,11 @@ export default function ResetPasswordPage() {
 
   if (status === "done") {
     return (
-      <div style={{ textAlign:"center",padding:"32px 0" }}>
-        <CheckCircle2 size={52} style={{ color:"#059669",margin:"0 auto 16px",display:"block" }}/>
-        <h2 style={{ margin:"0 0 8px",color:"#0f172a" }}>Password reset!</h2>
+      <div style={{ textAlign:"center", padding:"32px 0" }}>
+        <CheckCircle2 size={52} style={{ color:"#059669", margin:"0 auto 16px", display:"block" }}/>
+        <h2 style={{ margin:"0 0 8px", color:"#0f172a" }}>Password reset!</h2>
         <p style={{ color:"#64748b" }}>Your password has been changed. Redirecting to login…</p>
-        <Link className="button" href="/login" style={{ display:"inline-flex",marginTop:20,textDecoration:"none" }}>Go to Login</Link>
+        <Link className="button" href="/login" style={{ display:"inline-flex", marginTop:20, textDecoration:"none" }}>Go to Login</Link>
       </div>
     );
   }
@@ -68,16 +69,15 @@ export default function ResetPasswordPage() {
   return (
     <div>
       <div style={{ marginBottom:24 }}>
-        <p style={{ margin:0,color:"#667085",fontSize:12,textTransform:"uppercase",letterSpacing:"0.18em" }}>Reset password</p>
+        <p style={{ margin:0, color:"#667085", fontSize:12, textTransform:"uppercase", letterSpacing:"0.18em" }}>Reset password</p>
         <h1 style={{ margin:"12px 0 0" }}>Set your new password</h1>
-        <p style={{ margin:"8px 0 0",color:"#64748b",lineHeight:1.6 }}>Choose a strong password — at least 8 characters.</p>
+        <p style={{ margin:"8px 0 0", color:"#64748b", lineHeight:1.6 }}>Choose a strong password — at least 8 characters.</p>
       </div>
 
       <form onSubmit={handleSubmit} noValidate>
-        {/* Token field — pre-filled from URL, show if empty */}
         {!searchParams?.get("token") && (
           <label className="field">
-            Reset token <span style={{ fontSize:11,color:"#94a3b8" }}>(from your email)</span>
+            Reset token <span style={{ fontSize:11, color:"#94a3b8" }}>(from your email)</span>
             <input value={token} onChange={e=>setToken(e.target.value)} required placeholder="Paste token here"/>
           </label>
         )}
@@ -86,47 +86,62 @@ export default function ResetPasswordPage() {
           New password
           <div style={{ position:"relative" }}>
             <input
-              type={showPw?"text":"password"}
+              type={showPw ? "text" : "password"}
               value={password}
               onChange={e=>setPassword(e.target.value)}
               required minLength={8}
               placeholder="At least 8 characters"
               style={{ paddingRight:40 }}
             />
-            <button type="button" onClick={()=>setShowPw(!showPw)} style={{ position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",border:"none",background:"none",cursor:"pointer",color:"#64748b",display:"flex" }}>
-              {showPw?<EyeOff size={16}/>:<Eye size={16}/>}
+            <button type="button" onClick={()=>setShowPw(!showPw)} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", border:"none", background:"none", cursor:"pointer", color:"#64748b", display:"flex" }}>
+              {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
             </button>
           </div>
-          {password && <span style={{ fontSize:11,fontWeight:600,color:strengthColor }}>Strength: {strength}</span>}
+          {password && <span style={{ fontSize:11, fontWeight:600, color:strengthColor }}>Strength: {strength}</span>}
         </label>
 
         <label className="field">
           Confirm new password
           <input
-            type={showPw?"text":"password"}
+            type={showPw ? "text" : "password"}
             value={confirm}
             onChange={e=>setConfirm(e.target.value)}
             required minLength={8}
             placeholder="Re-enter password"
           />
-          {confirm && password !== confirm && <span style={{ fontSize:11,color:"#dc2626" }}>Passwords don&apos;t match</span>}
-          {confirm && password === confirm && confirm.length >= 8 && <span style={{ fontSize:11,color:"#059669" }}>✓ Passwords match</span>}
+          {confirm && password !== confirm && <span style={{ fontSize:11, color:"#dc2626" }}>Passwords don&apos;t match</span>}
+          {confirm && password === confirm && confirm.length >= 8 && <span style={{ fontSize:11, color:"#059669" }}>✓ Passwords match</span>}
         </label>
 
         {error && <p className="status danger">{error}</p>}
 
-        <button className="button" type="submit" disabled={status==="loading"||password!==confirm||password.length<8} style={{ width:"100%",marginTop:20 }}>
+        <button
+          className="button"
+          type="submit"
+          disabled={status==="loading" || password!==confirm || password.length<8}
+          style={{ width:"100%", marginTop:20 }}
+        >
           <ShieldCheck size={16} style={{ marginRight:8 }}/>
-          {status==="loading" ? "Resetting…" : "Reset Password"}
+          {status === "loading" ? "Resetting…" : "Reset Password"}
         </button>
       </form>
 
-      <div style={{ marginTop:24,display:"flex",justifyContent:"space-between",gap:12 }}>
+      <div style={{ marginTop:24, display:"flex", justifyContent:"space-between", gap:12 }}>
         <Link className="button ghost" href="/login">
           <ArrowLeft size={16} style={{ marginRight:8 }}/> Back to login
         </Link>
         <Link className="muted" href="/forgot-password">Request new link</Link>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ textAlign:"center", padding:"40px 0", color:"#64748b" }}>Loading…</div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
