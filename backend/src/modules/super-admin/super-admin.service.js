@@ -607,7 +607,9 @@ const AI_KB = {
 export async function getAIHistory(userId, { limit=20 } = {}) {
   try {
     const db = getDb();
+    // Create/update table — add source column if missing
     await db.prepare(`CREATE TABLE IF NOT EXISTS ai_query_history (id TEXT PRIMARY KEY, user_id TEXT, query TEXT NOT NULL, response TEXT NOT NULL, source TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+    try { await db.prepare(`ALTER TABLE ai_query_history ADD COLUMN source TEXT`).run(); } catch {}
     return db.prepare(`SELECT id,query,response,source,created_at FROM ai_query_history WHERE user_id=? ORDER BY created_at DESC LIMIT ?`).all(userId, +limit);
   } catch { return []; }
 }
