@@ -225,11 +225,25 @@ export function PatientRegistrationForm() {
     setForm(p=>({ ...p, familyHx:p.familyHx.includes(item)?p.familyHx.filter(x=>x!==item):[...p.familyHx,item] }));
   }
 
-  // Save patient
+  // Save patient — with duplicate NID check
   async function savePatient(){
     if(!form.firstName||!form.lastName||!form.gender){ showToast("First name, last name & gender are required"); return; }
     setSaving(true);
     try {
+      // ── Duplicate check by NID ──
+      if (form.nid && form.nid.trim()) {
+        try {
+          const existing = await patientsApi.getByNID(form.nid.trim()) as any;
+          if (existing && (existing.id || existing.mrn)) {
+            showToast(`⚠️ Patient already registered: ${existing.firstName||existing.first_name||""} ${existing.lastName||existing.last_name||""} (${existing.mrn||form.nid})`);
+            setSaving(false);
+            // Load existing patient and switch to view
+            setForm({ ...form, mrn:existing.mrn||form.mrn });
+            return;
+          }
+        } catch { /* NID not found — safe to proceed */ }
+      }
+
       await patientsApi.create({
         mrn:form.mrn, firstName:form.firstName, lastName:form.lastName, gender:form.gender,
         dateOfBirth:form.dob, nationalId:form.nid, phone:form.phone, email:form.email,
@@ -417,7 +431,16 @@ export function PatientRegistrationForm() {
               <FField label="Occupation"><input value={form.occupation} onChange={e=>setF("occupation",e.target.value)} placeholder="e.g. Farmer, Teacher" style={inp()}/></FField>
             </FRow>
             <FRow>
-              <FField label="National ID / Passport Number"><input value={form.nid} onChange={e=>setF("nid",e.target.value)} placeholder="1 19XX XXXXXXXXXXX X" style={inp()}/></FField>
+              <FField label="National ID / Passport Number"><input value={form.nid} onChange={e=>setF("nid",e.target.value)} onBlur={async ()=>{
+                if(!form.nid.trim()) return;
+                try {
+                  const existing = await patientsApi.getByNID(form.nid.trim()) as any;
+                  if (existing && existing.id) {
+                    showToast(`⚠️ Patient already exists: ${existing.firstName||""} ${existing.lastName||""} — MRN: ${existing.mrn||"N/A"}. Redirecting to their record.`);
+                    setForm(p=>({ ...p, firstName:existing.firstName||existing.first_name||p.firstName, lastName:existing.lastName||existing.last_name||p.lastName, mrn:existing.mrn||p.mrn }));
+                  }
+                } catch { /* not found — OK */ }
+              }} placeholder="1 19XX XXXXXXXXXXX X" style={inp()}/></FField>
             </FRow>
           </SectionCard>
 
