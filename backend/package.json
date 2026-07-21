@@ -1,16 +1,16 @@
 {
   "name": "@artic-health/backend",
   "version": "1.0.0",
-  "description": "ARTIC Health Companion — Enterprise HMS Backend API",
+  "description": "ARTIC Health Companion \u2014 Enterprise HMS Backend API",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js",
-    "dev:legacy": "node --watch src/server.js",
+    "dev": "node init && node --watch src/index.js",
+    "start": "node init && node src/index.js",
+    "dev:legacy": "node init && node --watch src/server.js",
     "db:migrate": "node src/database/migrate.js",
     "db:seed": "node src/database/seed.js",
     "setup": "node src/database/migrate.js && node src/database/seed.js"

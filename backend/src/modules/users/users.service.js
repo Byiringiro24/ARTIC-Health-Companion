@@ -68,8 +68,22 @@ export async function createUser(data, createdBy) {
   const existing = await db.prepare(`SELECT id FROM users WHERE LOWER(email)=LOWER(?) AND deleted_at IS NULL`).get(data.email);
   if (existing) throw new ConflictError(`Email '${data.email}' is already registered`);
 
-  const role = await db.prepare(`SELECT id FROM roles WHERE id=? AND deleted_at IS NULL`).get(data.roleId);
-  if (!role) throw new AppError("Role not found", 422, "INVALID_ROLE");
+  // Support roleId (UUID) OR roleName (string) — hospital manager uses role names as fallback
+  let role = null;
+  if (data.roleId) {
+    // Try by UUID first
+    role = await db.prepare(`SELECT id FROM roles WHERE id=? AND deleted_at IS NULL`).get(data.roleId);
+    // If not found by UUID, try treating roleId as a role name
+    if (!role) {
+      role = await db.prepare(`SELECT id FROM roles WHERE name=? AND deleted_at IS NULL`).get(data.roleId);
+    }
+  }
+  if (!role && data.roleName) {
+    role = await db.prepare(`SELECT id FROM roles WHERE name=? AND deleted_at IS NULL`).get(data.roleName);
+  }
+  if (!role) throw new AppError("Role not found. Please select a valid role.", 422, "INVALID_ROLE");
+
+  const resolvedRoleId = role.id;
 
   const hash = await bcrypt.hash(data.password || "TempPass2026!", config.bcrypt.rounds);
   const id   = `user-${uuidv4().slice(0, 8)}`;
@@ -81,7 +95,7 @@ export async function createUser(data, createdBy) {
        must_change_password,is_active,created_by,updated_by)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1,1,?,?)
   `).run(
-    id, data.tenantId, data.hospitalId, data.departmentId || null, data.roleId,
+    id, data.tenantId, data.hospitalId, data.departmentId || null, resolvedRoleId,
     data.firstName, data.lastName, data.email.toLowerCase().trim(),
     data.phone || null, hash, data.jobTitle || null,
     data.qualification || null, data.professionalRegNumber || null,
