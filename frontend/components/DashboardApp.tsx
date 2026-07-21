@@ -149,6 +149,18 @@ export function DashboardApp() {
   const active = navModules[activeModule];
   const unread = unreadCount || notifications.filter((n) => n.type === "danger" || n.type === "warning").length;
 
+  // ── Full-portal roles: render their own sidebar/layout, skip DashboardApp shell ──
+  const FULL_PORTAL_ROLES = ["doctor","nurse","pharmacist","laboratory","receptionist"];
+  if (FULL_PORTAL_ROLES.includes(user.role)) {
+    switch (user.role) {
+      case "doctor":       return <DoctorDashboard user={user} />;
+      case "nurse":        return <NurseDashboard user={user} />;
+      case "pharmacist":   return <PharmacistDashboard user={user} />;
+      case "laboratory":   return <LabDashboard user={user} />;
+      case "receptionist": return <ReceptionDashboard user={user} />;
+    }
+  }
+
   return (
     <main className="app-shell">
       {/* Sidebar */}

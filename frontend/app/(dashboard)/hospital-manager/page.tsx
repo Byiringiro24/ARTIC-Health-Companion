@@ -17,6 +17,7 @@ import {
   usersApi, appointmentsApi, billingApi, reportsApi,
   superAdminApi, inventoryApi,
 } from "@/lib/api/hms";
+import { AccountSettings } from "@/components/ui/AccountSettings";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://172.209.217.176:4001";
 
@@ -1722,196 +1723,15 @@ export default function HospitalManagerPage() {
           {/* ══ SETTINGS ══ */}
           {section==="settings" && (
             <div style={{ display:"grid",gap:16 }}>
-              <div><div style={{ fontWeight:700,fontSize:16,color:"#0f172a" }}>Settings & Security</div><div style={{ fontSize:11,color:"#94a3b8" }}>Hospital configuration · Security · Password management</div></div>
-
-              {/* OTP Password Change */}
-              <Card style={{ border:"2px solid #059669" }}>
-                <div style={{ padding:"16px 20px",borderBottom:"1px solid #f1f5f9",background:"linear-gradient(135deg,#f0fdf4,#e0f2fe)",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-                  <div>
-                    <div style={{ fontWeight:800,fontSize:14,color:"#0f172a",display:"flex",alignItems:"center",gap:6 }}><Key size={15} style={{ color:"#059669" }}/>Change Password — Secure 3-Step Verification</div>
-                    <div style={{ fontSize:11,color:"#64748b",marginTop:2 }}>Enter current password → Receive OTP by email → Set new password</div>
-                  </div>
-                  <ShieldCheck size={24} style={{ color:"#059669",opacity:0.5 }}/>
-                </div>
-
-                <div style={{ padding:"20px 22px" }}>
-                  {/* Step indicators */}
-                  <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:22 }}>
-                    {(["current","otp","newpw"] as OTPStep[]).map((s,i)=>{
-                      const labels=["Verify Identity","Enter OTP","New Password"];
-                      const done=otpStep==="done"||(otpStep==="otp"&&i===0)||(otpStep==="newpw"&&i<2);
-                      const active=otpStep===s;
-                      return (
-                        <div key={s} style={{ display:"flex",alignItems:"center",gap:6,flex:1 }}>
-                          <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:3,flex:1 }}>
-                            <div style={{ width:28,height:28,borderRadius:"50%",background:done?"#059669":active?"#0891b2":"#e2e8f0",color:done||active?"white":"#94a3b8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700 }}>
-                              {done?<CheckCircle size={14}/>:i+1}
-                            </div>
-                            <div style={{ fontSize:10,color:active?"#0891b2":done?"#059669":"#94a3b8",fontWeight:active||done?600:400,textAlign:"center" }}>{labels[i]}</div>
-                          </div>
-                          {i<2 && <div style={{ height:2,flex:0.5,background:done?"#059669":"#e2e8f0",borderRadius:2,marginBottom:16 }}/>}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Step 1: Current password */}
-                  {otpStep==="current" && (
-                    <div style={{ maxWidth:460 }}>
-                      <div style={{ background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:9,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#0369a1",lineHeight:1.6 }}>
-                        🔐 Enter your current password to begin. An OTP will be sent to <strong>{user?.email||"your email"}</strong> to confirm the change.
-                      </div>
-                      <div style={{ marginBottom:16 }}>
-                        <label style={{ fontSize:12,fontWeight:600,color:"#374151",display:"block",marginBottom:5 }}>Current Password *</label>
-                        <div style={{ position:"relative" }}>
-                          <input type={showPw?"text":"password"} value={pwCurrent} onChange={e=>setPwCurrent(e.target.value)} onKeyDown={e=>e.key==="Enter"&&stepRequestOTP()} placeholder="Enter your current password"
-                            style={{ width:"100%",padding:"10px 38px 10px 12px",borderRadius:9,border:"1px solid #e2e8f0",fontSize:13,color:"#0f172a",outline:"none",boxSizing:"border-box" }}/>
-                          <button type="button" onClick={()=>setShowPw(!showPw)} style={{ position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",border:"none",background:"none",cursor:"pointer",color:"#64748b",display:"flex" }}>
-                            {showPw?<EyeOff size={16}/>:<Eye size={16}/>}
-                          </button>
-                        </div>
-                      </div>
-                      <button onClick={stepRequestOTP} disabled={pwLoading||!pwCurrent}
-                        style={{ display:"flex",alignItems:"center",gap:7,padding:"11px 22px",background:pwLoading||!pwCurrent?"#e2e8f0":"linear-gradient(135deg,#059669,#0891b2)",color:pwLoading||!pwCurrent?"#94a3b8":"white",borderRadius:10,border:"none",cursor:pwLoading||!pwCurrent?"not-allowed":"pointer",fontSize:13,fontWeight:700 }}>
-                        <Mail size={14}/>{pwLoading?"Verifying & Sending OTP…":"Verify & Send OTP to Email"}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Step 2: Enter OTP */}
-                  {otpStep==="otp" && (
-                    <div style={{ maxWidth:460 }}>
-                      <div style={{ background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:9,padding:"12px 16px",marginBottom:16,fontSize:12,color:"#065f46",lineHeight:1.6 }}>
-                        ✅ OTP sent! Check your email — {otpHint}.<br/>The code is valid for <strong>10 minutes</strong>.
-                      </div>
-                      <div style={{ marginBottom:16 }}>
-                        <label style={{ fontSize:12,fontWeight:600,color:"#374151",display:"block",marginBottom:5 }}>Enter 6-Digit OTP</label>
-                        <input type="text" inputMode="numeric" maxLength={6} value={pwOtp} onChange={e=>setPwOtp(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="000000"
-                          style={{ width:200,padding:"12px 16px",borderRadius:9,border:`2px solid ${pwOtp.length===6?"#059669":"#e2e8f0"}`,fontSize:24,fontWeight:800,fontFamily:"monospace",letterSpacing:"0.3em",textAlign:"center",outline:"none",color:"#0f172a",boxSizing:"border-box" }}/>
-                        <div style={{ fontSize:11,color:"#94a3b8",marginTop:6 }}>Didn&apos;t receive it? <button onClick={()=>{ setOtpStep("current"); }} style={{ border:"none",background:"none",color:"#0891b2",cursor:"pointer",fontSize:11,fontWeight:600 }}>Go back and try again</button></div>
-                      </div>
-                      <div style={{ display:"flex",gap:8 }}>
-                        <button onClick={resetOTPFlow} style={{ padding:"10px 16px",borderRadius:9,border:"1px solid #e2e8f0",background:"white",cursor:"pointer",fontSize:13,color:"#374151",fontWeight:600 }}>← Back</button>
-                        <button onClick={stepConfirmOTP} disabled={pwOtp.length!==6}
-                          style={{ display:"flex",alignItems:"center",gap:7,padding:"11px 22px",background:pwOtp.length!==6?"#e2e8f0":"linear-gradient(135deg,#059669,#0891b2)",color:pwOtp.length!==6?"#94a3b8":"white",borderRadius:10,border:"none",cursor:pwOtp.length!==6?"not-allowed":"pointer",fontSize:13,fontWeight:700 }}>
-                          <CheckCircle size={14}/>Verify OTP
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 3: New password */}
-                  {otpStep==="newpw" && (
-                    <div style={{ maxWidth:460 }}>
-                      <div style={{ background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:9,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#065f46" }}>
-                        ✅ Identity confirmed via OTP. Now set your new password.
-                      </div>
-                      <div style={{ display:"grid",gap:14,marginBottom:16 }}>
-                        <div>
-                          <label style={{ fontSize:12,fontWeight:600,color:"#374151",display:"block",marginBottom:5 }}>New Password <span style={{ color:"#94a3b8",fontWeight:400 }}>(min 8 chars)</span></label>
-                          <div style={{ position:"relative" }}>
-                            <input type={showPw?"text":"password"} value={pwNew} onChange={e=>setPwNew(e.target.value)} placeholder="Strong new password"
-                              style={{ width:"100%",padding:"10px 38px 10px 12px",borderRadius:9,border:"1px solid #e2e8f0",fontSize:13,color:"#0f172a",outline:"none",boxSizing:"border-box" }}/>
-                            <button type="button" onClick={()=>setShowPw(!showPw)} style={{ position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",border:"none",background:"none",cursor:"pointer",color:"#64748b",display:"flex" }}>
-                              {showPw?<EyeOff size={16}/>:<Eye size={16}/>}
-                            </button>
-                          </div>
-                          {pwNew && (
-                            <div style={{ marginTop:6 }}>
-                              <div style={{ display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:3 }}>
-                                <span style={{ color:"#64748b" }}>Password strength</span>
-                                <span style={{ fontWeight:700,color:pwStrColor }}>{pwStrength}</span>
-                              </div>
-                              <div style={{ height:4,background:"#f1f5f9",borderRadius:4,overflow:"hidden" }}><div style={{ height:"100%",width:`${pwStrPct}%`,background:pwStrColor,borderRadius:4,transition:"width 0.3s" }}/></div>
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <label style={{ fontSize:12,fontWeight:600,color:"#374151",display:"block",marginBottom:5 }}>Confirm New Password</label>
-                          <input type={showPw?"text":"password"} value={pwConfirm} onChange={e=>setPwConfirm(e.target.value)} placeholder="Re-enter new password"
-                            style={{ width:"100%",padding:"10px 12px",borderRadius:9,border:`1px solid ${pwConfirm&&pwConfirm!==pwNew?"#fca5a5":pwConfirm&&pwConfirm===pwNew&&pwNew.length>=8?"#86efac":"#e2e8f0"}`,fontSize:13,color:"#0f172a",outline:"none",boxSizing:"border-box" }}/>
-                          {pwConfirm&&pwConfirm!==pwNew && <div style={{ fontSize:11,color:"#dc2626",marginTop:3 }}>✗ Passwords don&apos;t match</div>}
-                          {pwConfirm&&pwConfirm===pwNew&&pwNew.length>=8 && <div style={{ fontSize:11,color:"#059669",marginTop:3 }}>✓ Passwords match</div>}
-                        </div>
-                      </div>
-                      <div style={{ display:"flex",gap:8 }}>
-                        <button onClick={()=>setOtpStep("otp")} style={{ padding:"10px 16px",borderRadius:9,border:"1px solid #e2e8f0",background:"white",cursor:"pointer",fontSize:13,color:"#374151",fontWeight:600 }}>← Back</button>
-                        <button onClick={stepChangePassword} disabled={pwLoading||!pwNew||pwNew!==pwConfirm||pwNew.length<8}
-                          style={{ display:"flex",alignItems:"center",gap:7,padding:"11px 22px",background:pwLoading||!pwNew||pwNew!==pwConfirm||pwNew.length<8?"#e2e8f0":"linear-gradient(135deg,#059669,#0891b2)",color:pwLoading||!pwNew||pwNew!==pwConfirm||pwNew.length<8?"#94a3b8":"white",borderRadius:10,border:"none",cursor:pwLoading||!pwNew||pwNew.length<8?"not-allowed":"pointer",fontSize:13,fontWeight:700 }}>
-                          <Key size={14}/>{pwLoading?"Changing Password…":"Change Password"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Done */}
-                  {otpStep==="done" && (
-                    <div style={{ textAlign:"center",padding:"20px 0" }}>
-                      <div style={{ fontSize:48,marginBottom:12 }}>✅</div>
-                      <div style={{ fontSize:16,fontWeight:800,color:"#059669",marginBottom:6 }}>Password Changed Successfully!</div>
-                      <div style={{ fontSize:12,color:"#64748b" }}>A confirmation email has been sent. You will be logged out in a moment…</div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              {/* Hospital settings */}
-              <Card>
-                <CardHead title="🏥 Hospital Configuration"/>
-                <div style={{ padding:"16px 20px",display:"grid",gap:13 }}>
-                  {[
-                    { k:"name", l:"Hospital Name",      v:user?.facility||"",     t:"text" },
-                    { k:"email",l:"Contact Email",       v:"info@hospital.rw",     t:"email" },
-                    { k:"phone",l:"Contact Phone",       v:"+250 788 000 001",     t:"tel" },
-                    { k:"moh",  l:"MOH Registration #",  v:"RW-DH-2026-0042",      t:"text" },
-                    { k:"tz",   l:"Timezone",            v:"Africa/Kigali",        t:"text" },
-                    { k:"lang", l:"Default Language",    v:"Kinyarwanda / English",t:"text" },
-                  ].map(s=>(
-                    <div key={s.k} style={{ display:"grid",gridTemplateColumns:"190px 1fr",alignItems:"center",gap:14 }}>
-                      <label style={{ fontSize:12,fontWeight:600,color:"#374151" }}>{s.l}</label>
-                      <input defaultValue={s.v} type={s.t} style={{ padding:"8px 12px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:12,color:"#0f172a",outline:"none" }}/>
-                    </div>
-                  ))}
-                  <div style={{ display:"flex",justifyContent:"flex-end",marginTop:4 }}>
-                    <button onClick={()=>show("Settings saved","success")} style={{ display:"flex",alignItems:"center",gap:6,padding:"9px 20px",background:"#059669",color:"white",borderRadius:9,border:"none",cursor:"pointer",fontSize:13,fontWeight:600 }}><Save size={13}/>Save Settings</button>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Notification preferences */}
-              <Card>
-                <CardHead title="🔔 Notification Preferences"/>
-                <div style={{ padding:"16px 20px",display:"grid",gap:10 }}>
-                  {[
-                    { k:"email_alerts",  l:"Email Alerts",         sub:"Critical system & patient alerts",   on:true },
-                    { k:"sms_alerts",    l:"SMS Notifications",    sub:"Urgent escalations only",             on:false },
-                    { k:"daily_report",  l:"Daily Summary Report", sub:"Sent every morning at 7:00 AM",       on:true },
-                    { k:"weekly_report", l:"Weekly Performance",   sub:"Sent every Monday morning",           on:true },
-                  ].map(n=>(
-                    <div key={n.k} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",background:"#f8fafc",borderRadius:9 }}>
-                      <div>
-                        <div style={{ fontSize:13,fontWeight:600,color:"#0f172a" }}>{n.l}</div>
-                        <div style={{ fontSize:11,color:"#94a3b8" }}>{n.sub}</div>
-                      </div>
-                      <div style={{ width:42,height:22,borderRadius:11,background:n.on?"#059669":"#d1d5db",cursor:"pointer",position:"relative",flexShrink:0 }} onClick={()=>show(`${n.l} ${n.on?"disabled":"enabled"}`,"info")}>
-                        <div style={{ width:18,height:18,borderRadius:"50%",background:"white",position:"absolute",top:2,transition:"left 0.2s",left:n.on?22:2 }}/>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Access scope */}
-              <div style={{ background:"linear-gradient(135deg,#ecfdf5,#e0f2fe)",borderRadius:12,padding:"16px 20px",border:"1px solid #a7f3d0" }}>
-                <div style={{ fontWeight:700,fontSize:13,color:"#059669",marginBottom:10,display:"flex",alignItems:"center",gap:5 }}><ShieldCheck size={14}/>Your Access Boundaries</div>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:12,color:"#065f46" }}>
-                  <div>✅ Your hospital data only</div><div>✅ Staff management</div>
-                  <div>✅ Operational oversight</div><div>✅ Financial reporting</div>
-                  <div>✅ Communication tools</div><div>✅ Feature requests</div>
-                  <div>🔒 No other hospital data</div><div>🔒 No clinical notes</div>
-                  <div>🔒 No system-wide settings</div><div>🔒 Rwanda DPL 2021 enforced</div>
+              <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+                <div>
+                  <div style={{ fontWeight:700,fontSize:16,color:"#0f172a" }}>Settings</div>
+                  <div style={{ fontSize:11,color:"#94a3b8" }}>Hospital configuration · Personal account · Security</div>
                 </div>
               </div>
+
+              {/* Personal Account Settings — full AccountSettings component */}
+              <AccountSettings user={user} onClose={()=>setSection("overview")}/>
             </div>
           )}
 

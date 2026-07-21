@@ -6,7 +6,7 @@ import {
   AlertCircle, Download, Plus, X,
 } from "lucide-react";
 import type { AppUser } from "@/types/hms";
-import { OTPPasswordChange } from "@/components/ui/OTPPasswordChange";
+import { AccountSettings } from "@/components/ui/AccountSettings";
 import { logout } from "@/lib/auth";
 import { LAB_CATALOGUE } from "@/components/dashboard/PatientRegistrationForm";
 
@@ -322,21 +322,7 @@ export function LabDashboard({ user }: { user?: AppUser }) {
 
           {/* Settings */}
           {section==="settings"&&(
-            <div style={{ display:"grid",gap:16,maxWidth:600 }}>
-              <div style={{ fontWeight:700,fontSize:15,color:"#0f172a" }}>Settings & Security</div>
-              <OTPPasswordChange userEmail={user?.email}/>
-              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"16px 18px" }}>
-                <div style={{ fontWeight:700,fontSize:12,color:"#0f172a",marginBottom:10 }}>👤 Profile</div>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
-                  {[{ l:"Name",v:user?.name||"—" },{ l:"Email",v:user?.email||"—" },{ l:"Department",v:user?.department||"—" },{ l:"Facility",v:user?.facility||"—" }].map(f=>(
-                    <div key={f.l} style={{ padding:"9px 11px",background:"#f8fafc",borderRadius:8 }}>
-                      <div style={{ fontSize:10,color:"#94a3b8",fontWeight:600,textTransform:"uppercase" }}>{f.l}</div>
-                      <div style={{ fontSize:12,fontWeight:600,color:"#0f172a",marginTop:2 }}>{f.v}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <AccountSettings user={user} onClose={()=>setSection("dashboard")}/>
           )}
         </div>
       </div>
