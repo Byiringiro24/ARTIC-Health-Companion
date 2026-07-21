@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, User, Bell, Globe, Link } from "lucide-react";
 import { useToast } from "@/lib/store";
+import { getSession } from "@/lib/auth";
 import { SectionHeader } from "@/components/ui/shared";
+import { OTPPasswordChange } from "@/components/ui/OTPPasswordChange";
 
 export function SettingsModule() {
   const { show } = useToast();
+  const session = getSession();
   const [settings, setSettings] = useState({
-    facilityName: "Kigali District Hospital",
+    facilityName: session?.facility || "Kigali District Hospital",
     mohCode: "KDH-001",
     province: "Kigali",
     district: "Gasabo",
@@ -26,9 +29,42 @@ export function SettingsModule() {
   }
 
   return (
-    <div className="grid cols-2">
-      <section className="panel">
-        <SectionHeader title="Facility Settings" />
+    <div style={{ display: "grid", gap: 20 }}>
+
+      {/* ── Password Change (OTP) ─────────────────────────────────────────── */}
+      <OTPPasswordChange
+        userEmail={session?.email}
+        onSuccess={() => show("Password changed — logging out…", "success")}
+      />
+
+      {/* ── Profile ──────────────────────────────────────────────────────── */}
+      <section className="panel" style={{ padding: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <User size={15} color="#027c8e" />
+          <SectionHeader title="Your Profile" />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+          {[
+            { l: "Full Name",   v: session?.name || "—" },
+            { l: "Email",       v: session?.email || "—" },
+            { l: "Role",        v: session?.roleLabel || session?.roleName || session?.role || "—" },
+            { l: "Department",  v: session?.department || "—" },
+            { l: "Facility",    v: session?.facility || "—" },
+          ].map(f => (
+            <div key={f.l} style={{ padding: "10px 12px", background: "#f8fafc", borderRadius: 9, border: "1px solid #e2e8f0" }}>
+              <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{f.l}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", marginTop: 2 }}>{f.v}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Facility Settings ─────────────────────────────────────────────── */}
+      <section className="panel" style={{ padding: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <Globe size={15} color="#027c8e" />
+          <SectionHeader title="Facility Settings" />
+        </div>
         <form onSubmit={handleSave} className="form-grid">
           <label className="field">Facility Name <input value={settings.facilityName} onChange={(e) => setSettings({ ...settings, facilityName: e.target.value })} /></label>
           <label className="field">MOH Facility Code <input value={settings.mohCode} onChange={(e) => setSettings({ ...settings, mohCode: e.target.value })} /></label>
@@ -56,9 +92,13 @@ export function SettingsModule() {
         </form>
       </section>
 
-      <div className="grid">
-        <section className="panel">
-          <SectionHeader title="Notifications &amp; Backup" />
+      {/* ── Notifications & Backup ────────────────────────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <section className="panel" style={{ padding: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <Bell size={15} color="#027c8e" />
+            <SectionHeader title="Notifications & Backup" />
+          </div>
           <ul className="compact-list">
             {[
               ["SMS reminders (Africa's Talking)", "Enabled"],
@@ -73,24 +113,26 @@ export function SettingsModule() {
           </ul>
         </section>
 
-        <section className="panel">
-          <SectionHeader title="Integration Endpoints" />
+        <section className="panel" style={{ padding: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <Link size={15} color="#027c8e" />
+            <SectionHeader title="Integration Endpoints" />
+          </div>
           <ul className="compact-list">
             {[
               ["NID/NIDA API", "Connected"],
               ["RSSB Insurance API", "Live"],
               ["MTN MoMo API", "Live"],
               ["Africa's Talking SMS", "Active"],
-              ["SMTP Email", "Configured"],
+              ["SMTP Email (Gmail)", "Configured"],
+              ["Gemini AI", "Active"],
             ].map(([k, v]) => (
               <li key={k}>
                 <span style={{ fontSize: 13 }}>{k}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span className="status">{v}</span>
                   <button type="button" style={{ border: "none", background: "none", cursor: "pointer", color: "#027c8e", fontSize: 12 }}
-                    onClick={() => show(`Testing ${k}…`, "info")}>
-                    Test
-                  </button>
+                    onClick={() => show(`Testing ${k}…`, "info")}>Test</button>
                 </div>
               </li>
             ))}
