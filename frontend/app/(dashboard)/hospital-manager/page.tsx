@@ -249,6 +249,8 @@ export default function HospitalManagerPage() {
       setKpis(Array.isArray(r) ? r : []);
     } catch(e:any) { show(e.message||"Load failed","error"); }
     finally { setLoading(false); }
+    // Always load roles so the Add Staff modal works from any section
+    usersApi.roles().then((res:any) => setRoles(res?.roles || [])).catch(() => {});
   }, [show]);
 
   useEffect(() => { load(); }, [load]);
@@ -298,13 +300,32 @@ export default function HospitalManagerPage() {
   async function createStaff() {
     if (!staffForm.firstName||!staffForm.email||!staffForm.roleId) { show("Name, email & role required","error"); return; }
     try {
-      await usersApi.create({ ...staffForm, password:`Staff@${Math.floor(1000+Math.random()*9000)}!`,
-        tenantId:(getSession() as any)?.tenantId||null, hospitalId:(getSession() as any)?.hospitalId||null });
+      // roleId may be a DB UUID (from API) or a role name string (from fallback list)
+      // Backend accepts either roleId (UUID) or roleName (string)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(staffForm.roleId);
+      const payload: any = {
+        firstName: staffForm.firstName,
+        lastName:  staffForm.lastName,
+        email:     staffForm.email,
+        phone:     staffForm.phone || null,
+        jobTitle:  staffForm.jobTitle || null,
+        departmentId: staffForm.deptId || null,
+        password:  `Staff@${Math.floor(1000+Math.random()*9000)}!`,
+        tenantId:  (getSession() as any)?.tenantId || null,
+        hospitalId:(getSession() as any)?.hospitalId || null,
+      };
+      if (isUUID) {
+        payload.roleId = staffForm.roleId;
+      } else {
+        // hardcoded fallback: pass as roleName so backend can resolve it
+        payload.roleName = staffForm.roleId;
+      }
+      await usersApi.create(payload);
       show(`✅ ${staffForm.firstName} ${staffForm.lastName} created · Welcome email sent`,"success");
       setShowAddStaff(false);
       setStaffForm({ firstName:"",lastName:"",email:"",phone:"",roleId:"",jobTitle:"",deptId:"" });
       load();
-    } catch(e:any) { show(e.message||"Failed","error"); }
+    } catch(e:any) { show(e.message||"Failed to create staff","error"); }
   }
 
   async function submitFeatureRequest() {
@@ -1763,7 +1784,24 @@ export default function HospitalManagerPage() {
               <div><label style={{ fontSize:11,fontWeight:600,color:"#374151",display:"block",marginBottom:4 }}>Role *</label>
               <select value={staffForm.roleId} onChange={e=>setStaffForm({...staffForm,roleId:e.target.value})} style={{ width:"100%",padding:"9px 11px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:12,outline:"none" }}>
                 <option value="">Select role…</option>
-                {roles.filter((r:any)=>!["system-admin"].includes(r.name)).map((r:any)=>(
+                {(roles.length > 0 ? roles.filter((r:any)=>!["system-admin","hospital-manager"].includes(r.name)) : [
+                  { id:"medical-director",  name:"medical-director",  label:"Medical Director" },
+                  { id:"doctor",            name:"doctor",            label:"Doctor" },
+                  { id:"nurse",             name:"nurse",             label:"Nurse" },
+                  { id:"pharmacist",        name:"pharmacist",        label:"Pharmacist" },
+                  { id:"laboratory",        name:"laboratory",        label:"Laboratory Scientist" },
+                  { id:"radiology",         name:"radiology",         label:"Radiology Staff" },
+                  { id:"receptionist",      name:"receptionist",      label:"Receptionist" },
+                  { id:"accountant",        name:"accountant",        label:"Accountant" },
+                  { id:"cashier",           name:"cashier",           label:"Cashier" },
+                  { id:"insurance-officer", name:"insurance-officer", label:"Insurance Officer" },
+                  { id:"store-manager",     name:"store-manager",     label:"Store Manager" },
+                  { id:"hr-manager",        name:"hr-manager",        label:"HR Manager" },
+                  { id:"quality-officer",   name:"quality-officer",   label:"Quality Officer" },
+                  { id:"data-officer",      name:"data-officer",      label:"Data Officer" },
+                  { id:"ambulance-driver",  name:"ambulance-driver",  label:"Ambulance Driver" },
+                  { id:"records-officer",   name:"records-officer",   label:"Medical Records Officer" },
+                ]).map((r:any)=>(
                   <option key={r.id} value={r.id}>{r.label}</option>
                 ))}
               </select></div>
